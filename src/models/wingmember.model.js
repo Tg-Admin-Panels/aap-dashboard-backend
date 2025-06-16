@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const memberSchema = new mongoose.Schema(
+const wingMemberSchema = new mongoose.Schema(
     {
         name: { type: String, required: true },
         role: { type: String, enum: ["leader", "member"], required: true },
@@ -24,5 +24,5 @@ const memberSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-const Member = mongoose.model("Member", memberSchema);
-export default Member;
+const WingMember = mongoose.model("WingMember", wingMemberSchema);
+export default WingMember;

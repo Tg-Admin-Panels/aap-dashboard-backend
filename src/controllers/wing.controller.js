@@ -1,8 +1,9 @@
 import Wing from "../models/wing.model.js";
-import Member from "../models/member.model.js";
+import WingMember from "../models/wingmember.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { uploadOnCloudinary } from "../utils/coudinary.js";
 
 // Create new wing
 export const createWing = asyncHandler(async (req, res) => {
@@ -23,25 +24,35 @@ export const createWing = asyncHandler(async (req, res) => {
 // Add a leader to a wing
 export const addLeader = asyncHandler(async (req, res) => {
     const { wingId } = req.params;
-    const { name, post, image, phone } = req.body;
+    const { name, post, phone } = req.body;
 
-    if (!name || !post || !image || !phone) {
+    // if(wingM)
+    if (!name || !post  || !phone) {
         throw new ApiError(
             400,
             "All fields (name, post, image, phone) are required"
         );
     }
 
+    const imagePath = req.files?.image?.path;
+    if (!imagePath) return new ApiError("image is required");
+
+    console.log("uploading start")
+    const uploadedImage = await uploadOnCloudinary(imagePath);
+    console.log("upload complete")
+    if (!uploadedImage) throw new ApiError("Failed to upload image");
+
     const wing = await Wing.findById(wingId);
     if (!wing) throw new ApiError(404, "Wing not found");
 
     if (wing.leader) throw new ApiError(400, "Wing already has a leader");
 
-    const leader = await Member.create({
+    console.log("leader added")
+    const leader = await WingMember.create({
         name,
         role: "leader",
         post,
-        image,
+        image: uploadedImage.secure_url,
         phone,
         wing: wing._id,
     });
@@ -63,23 +74,31 @@ export const addLeader = asyncHandler(async (req, res) => {
 // Add a member to a wing
 export const addMember = asyncHandler(async (req, res) => {
     const { wingId } = req.params;
-    const { name, post, image, phone } = req.body;
+    const { name, post, phone } = req.body;
 
-    if (!name || !post || !image || !phone) {
+    // if(wingM)
+    if (!name || !post || !phone) {
         throw new ApiError(
             400,
             "All fields (name, post, image, phone) are required"
         );
     }
 
+    const imagePath = req.files?.image[0]?.path;
+    if (!imagePath) return new ApiError("image is required");
+
+    const uploadedImage = await uploadOnCloudinary(imagePath);
+
+    if (!uploadedImage) throw new ApiError("Failed to upload image");
+
     const wing = await Wing.findById(wingId);
     if (!wing) throw new ApiError(404, "Wing not found");
 
-    const member = await Member.create({
+    const member = await WingMember.create({
         name,
         role: "member",
         post,
-        image,
+        image: uploadedImage.secure_url,
         phone,
         wing: wing._id,
     });
@@ -130,5 +149,21 @@ export const getWingMembers = asyncHandler(async (req, res) => {
         .status(200)
         .json(
             new ApiResponse(200, result, "Fetched wing members successfully")
+        );
+});
+
+export const getAllWingMembers = asyncHandler(async (req, res) => {
+    const allMembers = await WingMember.find({});
+
+    if (!allMembers) throw new ApiError("Failed to fetch wing members.");
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                allMembers,
+                "All wing members fetched successfully."
+            )
         );
 });
