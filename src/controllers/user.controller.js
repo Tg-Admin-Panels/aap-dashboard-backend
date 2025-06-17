@@ -15,12 +15,11 @@ export const login = asyncHandler(async (req, res) => {
     const isPasswordMatch = await user.isPasswordCorrect(password);
     if (!isPasswordMatch) throw new ApiError(401, "Invalid credentials");
 
-
     const safeUser = user.toObject();
     delete safeUser.password;
 
     const token = await user.generateAccessToken();
-    if (!token) throw new ApiError(500, "Failed to generate access token");   
+    if (!token) throw new ApiError(500, "Failed to generate access token");
 
     const cookiesOption = {
         expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -47,9 +46,9 @@ export const login = asyncHandler(async (req, res) => {
 export const getCurrentUser = asyncHandler(async (req, res) => {
     const user = req.user;
     return res.status(200).json(new ApiResponse(200, user, "User fetched"));
-})
+});
 export const createAdmin = asyncHandler(async (req, res) => {
-    const { name, mobileNumber, password } = req.body;  
+    const { name, mobileNumber, password } = req.body;
 
     if (!name || !mobileNumber || !password)
         throw new ApiError(400, "All fields are required");
@@ -63,14 +62,12 @@ export const createAdmin = asyncHandler(async (req, res) => {
         password,
         role: "admin",
     });
-    return res.status(201).json(
-        new ApiResponse(201, admin, "Admin created successfully")
-    );
-}); 
-
+    return res
+        .status(201)
+        .json(new ApiResponse(201, admin, "Admin created successfully"));
+});
 
 export const getUsers = asyncHandler(async (req, res) => {
-    
     const users = await User.find();
     res.status(200).json(new ApiResponse(200, users, "All users fetched"));
 });
@@ -81,8 +78,10 @@ export const getAdmins = asyncHandler(async (req, res) => {
 });
 
 export const getUserById = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.params.id).populate("volunteer", "-password");
+    const user = await User.findById(req.params.id).populate(
+        "volunteer",
+        "-password"
+    );
     if (!user) throw new ApiError(404, "User not found");
     res.status(200).json(new ApiResponse(200, user, "User fetched"));
 });
-

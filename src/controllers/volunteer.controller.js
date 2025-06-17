@@ -67,7 +67,10 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         mobileNumber: mobileNumber,
     });
     if (existingVolunteer) {
-        throw new ApiError(400, "Volunteer with this mobile number already exists");
+        throw new ApiError(
+            400,
+            "Volunteer with this mobile number already exists"
+        );
     }
 
     // If all validations pass
@@ -92,15 +95,13 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         villageName,
     });
 
-    const user = await User.create(
-        { 
-            name: fullName,
-            mobileNumber: mobileNumber,
-            role: "volunteer", 
-            password,
-            volunteer: volunteer._id 
-        }
-    )
+    const user = await User.create({
+        name: fullName,
+        mobileNumber: mobileNumber,
+        role: "volunteer",
+        password,
+        volunteer: volunteer._id,
+    });
 
     if (!user) {
         throw new ApiError(500, "Failed to create user");

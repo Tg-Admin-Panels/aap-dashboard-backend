@@ -11,8 +11,7 @@ app.use(
     })
 );
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser())
-
+app.use(cookieParser());
 
 import wingRoutes from "./routes/wing.route.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";

@@ -6,10 +6,13 @@ import {
     getMembersByVolunteer,
     getMembersJoinedBySelf,
 } from "../controllers/member.controller.js";
+import { ensureAuthenticated } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
 router.post("/", createMember);
+
+router.use(ensureAuthenticated)
 router.get("/", getAllMembers);
 router.get("/:id", getMemberById);
 

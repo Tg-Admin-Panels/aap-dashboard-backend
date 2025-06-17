@@ -43,4 +43,3 @@ export const ensureWingleader = asyncHandler(async (req, _, next) => {
     if (req.user.role !== "wingleader") throw new ApiError(403, "Unauthorized");
     next();
 });
-

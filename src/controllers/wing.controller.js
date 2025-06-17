@@ -27,13 +27,10 @@ export const addLeader = asyncHandler(async (req, res) => {
     const { wingId } = req.params;
     const { name, post, phone } = req.body;
 
-    console.log("add leader started")
-    
+    console.log("add leader started");
+
     if (!name || !post || !phone) {
-        throw new ApiError(
-            400,
-            "All fields are required"
-        );
+        throw new ApiError(400, "All fields are required");
     }
 
     const imagePath = req.file?.path;

@@ -7,7 +7,10 @@ import {
     deleteVolunteer,
     updateVolunteerStatus,
 } from "../controllers/volunteer.controller.js";
-import { ensureAdmin, ensureAuthenticated } from "../middlewares/auth.middleware.js";
+import {
+    ensureAdmin,
+    ensureAuthenticated,
+} from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
@@ -18,5 +21,5 @@ router.get("/", ensureAdmin, getAllVolunteers);
 router.get("/:id", getVolunteerById);
 // router.put("/:id",  updateVolunteer);
 router.delete("/:id", ensureAdmin, deleteVolunteer);
-router.patch("/:id/status",ensureAdmin, updateVolunteerStatus);
+router.patch("/:id/status", ensureAdmin, updateVolunteerStatus);
 export default router;
