@@ -5,14 +5,18 @@ import {
     getVolunteerById,
     updateVolunteer,
     deleteVolunteer,
+    updateVolunteerStatus,
 } from "../controllers/volunteer.controller.js";
+import { ensureAdmin, ensureAuthenticated } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
 router.post("/", createVolunteer);
-router.get("/", getAllVolunteers);
-router.get("/:id", getVolunteerById);
-router.put("/:id", updateVolunteer);
-router.delete("/:id", deleteVolunteer);
 
+router.use(ensureAuthenticated);
+router.get("/", ensureAdmin, getAllVolunteers);
+router.get("/:id", getVolunteerById);
+// router.put("/:id",  updateVolunteer);
+router.delete("/:id", ensureAdmin, deleteVolunteer);
+router.patch("/:id/status",ensureAdmin, updateVolunteerStatus);
 export default router;

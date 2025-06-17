@@ -12,16 +12,6 @@ const volunteerSchema = new mongoose.Schema(
         },
         mobileNumber: { type: String, required: true, match: /^[6-9]\d{9}$/ },
         religion: { type: String },
-        occupation: {
-            type: String,
-            enum: [
-                "Political Volunteer",
-                "Self-Employed",
-                "Business Owner",
-                "Farmer",
-            ],
-        },
-        income: { type: String },
         profilePicture: { type: String },
 
         zone: { type: String, enum: ["Urban", "Rural"], required: true },
@@ -40,8 +30,14 @@ const volunteerSchema = new mongoose.Schema(
         // Rural specific
         panchayat: { type: String },
         villageName: { type: String },
+        status: {
+            type: String,
+            enum: ["active", "blocked"],
+            default: "active",
+        },
     },
     { timestamps: true }
 );
 
-export default mongoose.model("Volunteer", volunteerSchema);
+const Volunteer = mongoose.model("Volunteer", volunteerSchema);
+export default Volunteer;

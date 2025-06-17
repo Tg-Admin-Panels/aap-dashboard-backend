@@ -1,3 +1,4 @@
+import User from "../models/user.model.js";
 import Wing from "../models/wing.model.js";
 import WingMember from "../models/wingmember.model.js";
 import ApiError from "../utils/ApiError.js";
@@ -26,28 +27,28 @@ export const addLeader = asyncHandler(async (req, res) => {
     const { wingId } = req.params;
     const { name, post, phone } = req.body;
 
-    // if(wingM)
-    if (!name || !post  || !phone) {
+    console.log("add leader started")
+    
+    if (!name || !post || !phone) {
         throw new ApiError(
             400,
-            "All fields (name, post, image, phone) are required"
+            "All fields are required"
         );
     }
 
-    const imagePath = req.files?.image?.path;
-    if (!imagePath) return new ApiError("image is required");
+    const imagePath = req.file?.path;
+    if (!imagePath) throw new ApiError(400, "image is required");
 
-    console.log("uploading start")
     const uploadedImage = await uploadOnCloudinary(imagePath);
-    console.log("upload complete")
-    if (!uploadedImage) throw new ApiError("Failed to upload image");
+
+    if (!uploadedImage) throw new ApiError(500, "Failed to upload image");
 
     const wing = await Wing.findById(wingId);
     if (!wing) throw new ApiError(404, "Wing not found");
 
     if (wing.leader) throw new ApiError(400, "Wing already has a leader");
 
-    console.log("leader added")
+    console.log("leader added");
     const leader = await WingMember.create({
         name,
         role: "leader",
@@ -60,6 +61,19 @@ export const addLeader = asyncHandler(async (req, res) => {
     wing.leader = leader._id;
     await wing.save();
 
+    // const user = await User.findOneAndUpdate(
+    //     { mobileNumber: phone },
+    //     {
+    //         $set: {
+    //             name,
+    //             mobileNumber: phone,
+    //             role: "wingleader",
+    //             wing: wing._id,
+    //         },
+    //     },
+    //     { upsert: true, new: true }
+    // );
+
     return res
         .status(201)
         .json(
@@ -69,6 +83,11 @@ export const addLeader = asyncHandler(async (req, res) => {
                 "Leader added to wing successfully"
             )
         );
+});
+
+export const getAllLeaders = asyncHandler(async (req, res) => {
+    const leaders = await WingMember.find({ role: "leader" });
+    res.status(200).json(new ApiResponse(200, leaders, "All leaders fetched"));
 });
 
 // Add a member to a wing
