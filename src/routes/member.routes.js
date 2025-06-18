@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.post("/", createMember);
 
-router.use(ensureAuthenticated)
+router.use(ensureAuthenticated);
 router.get("/", getAllMembers);
 router.get("/:id", getMemberById);
 

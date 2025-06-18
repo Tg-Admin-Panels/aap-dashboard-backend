@@ -3,8 +3,10 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
 import User from "../models/user.model.js";
+import { uploadOnCloudinary } from "../utils/coudinary.js";
 
 export const createVolunteer = asyncHandler(async (req, res) => {
+    console.log("Create volunteer started", req.body);
     const {
         fullName,
         password,
@@ -16,7 +18,6 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         district,
         block,
         religion,
-        profilePicture,
         wardNumber,
         boothNumber,
         pinCode,
@@ -40,6 +41,8 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     if (!mobileNumber || !/^[6-9]\d{9}$/.test(mobileNumber)) {
         throw new ApiError(400, "Valid mobile number is required");
     }
+    if(!password) throw new ApiError(400, "Password is required");
+
     if (!zone || !["Urban", "Rural"].includes(zone)) {
         throw new ApiError(400, "Zone must be either 'Urban' or 'Rural'");
     }
@@ -50,11 +53,11 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     if (zone === "Urban") {
         if (!cityName)
             throw new ApiError(400, "City name is required for Urban zone");
-        if (!streetOrLocality)
-            throw new ApiError(
-                400,
-                "Street or Locality is required for Urban zone"
-            );
+        // if (!streetOrLocality)
+        //     throw new ApiError(
+        //         400,
+        //         "Street or Locality is required for Urban zone"
+        //     );
     } else if (zone === "Rural") {
         if (!panchayat)
             throw new ApiError(400, "Panchayat is required for Rural zone");
@@ -72,6 +75,15 @@ export const createVolunteer = asyncHandler(async (req, res) => {
             "Volunteer with this mobile number already exists"
         );
     }
+
+    const imagePath = req.file?.path;
+    if (!imagePath) throw new ApiError(400, "Image is required");
+
+    const uploadedImage = await uploadOnCloudinary(imagePath);
+
+    if (!uploadedImage) throw new ApiError(500, "Failed to upload image");
+
+    const profilePicture = uploadedImage.secure_url;
 
     // If all validations pass
     const volunteer = await Volunteer.create({
@@ -95,6 +107,8 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         villageName,
     });
 
+    if(!volunteer) throw new ApiError(500, "Failed to create volunteer");
+
     const user = await User.create({
         name: fullName,
         mobileNumber: mobileNumber,
@@ -106,8 +120,8 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     if (!user) {
         throw new ApiError(500, "Failed to create user");
     }
-
-    res.status(201).json(
+    
+    return res.status(201).json(
         new ApiResponse(201, volunteer, "Volunteer created successfully")
     );
 });

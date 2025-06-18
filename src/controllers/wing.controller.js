@@ -58,19 +58,6 @@ export const addLeader = asyncHandler(async (req, res) => {
     wing.leader = leader._id;
     await wing.save();
 
-    // const user = await User.findOneAndUpdate(
-    //     { mobileNumber: phone },
-    //     {
-    //         $set: {
-    //             name,
-    //             mobileNumber: phone,
-    //             role: "wingleader",
-    //             wing: wing._id,
-    //         },
-    //     },
-    //     { upsert: true, new: true }
-    // );
-
     return res
         .status(201)
         .json(
@@ -80,6 +67,69 @@ export const addLeader = asyncHandler(async (req, res) => {
                 "Leader added to wing successfully"
             )
         );
+});
+
+// change wing leader
+export const changeLeader = asyncHandler(async (req, res) => {
+    const { wingId } = req.params;
+    const { name, post, phone, memberId } = req.body;
+
+    if (!memberId && (!name || !post || !phone)) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    const wing = await Wing.findById(wingId);
+    if (!wing) throw new ApiError(404, "Wing not found");
+
+    // If there is an existing leader, demote them to 'member'
+    if (wing.leader) {
+        const currentLeader = await WingMember.findById(wing.leader);
+        if (currentLeader) {
+            currentLeader.role = "member";
+            await currentLeader.save();
+            wing.members.push(currentLeader._id);
+        }
+    }
+
+    let newLeader;
+
+    if (memberId) {
+        // Promote existing member to leader
+        newLeader = await WingMember.findById(memberId);
+        if (!newLeader) throw new ApiError(404, "Selected member not found");
+
+        newLeader.role = "leader";
+        await newLeader.save();
+    } else {
+        // Create new leader
+        let uploadedImageUrl = "";
+
+        const imagePath = req.file?.path;
+        if (imagePath) {
+            const uploadedImage = await uploadOnCloudinary(imagePath);
+            if (!uploadedImage) throw new ApiError(500, "Image upload failed");
+            uploadedImageUrl = uploadedImage.secure_url;
+        } else {
+            throw new ApiError(400, "Image is required for new leader");
+        }
+
+        newLeader = await WingMember.create({
+            name,
+            phone,
+            post,
+            image: uploadedImageUrl,
+            role: "leader",
+            wing: wing._id,
+        });
+    }
+
+    // Update wing with new leader
+    wing.leader = newLeader._id;
+    await wing.save();
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, newLeader, "Leader updated successfully"));
 });
 
 export const getAllLeaders = asyncHandler(async (req, res) => {
@@ -100,7 +150,7 @@ export const addMember = asyncHandler(async (req, res) => {
         );
     }
 
-    const imagePath = req.files?.image[0]?.path;
+    const imagePath = req.file?.path;
     if (!imagePath) return new ApiError("image is required");
 
     const uploadedImage = await uploadOnCloudinary(imagePath);
@@ -133,6 +183,40 @@ export const addMember = asyncHandler(async (req, res) => {
                 "Member added to wing successfully"
             )
         );
+});
+
+export const updateMember = asyncHandler(async (req, res) => {
+    const { memberId } = req.params;
+    const { name, post, phone } = req.body;
+
+    console.log("Update member started");
+    const member = await WingMember.findById(memberId);
+    if (!member) throw new ApiError(404, "Wing member not found");
+
+    const updateFields = {};
+
+    if (name) updateFields.name = name;
+    if (post) updateFields.post = post;
+    if (phone) updateFields.phone = phone;
+
+    console.log("Before updload")
+    // Handle optional image update
+    const imagePath = req.file?.path;
+    if (imagePath) {
+        const uploadedImage = await uploadOnCloudinary(imagePath);
+        if (!uploadedImage) throw new ApiError(500, "Failed to upload image");
+        updateFields.image = uploadedImage.secure_url;
+        console.log("After upload")
+    }
+
+    // Apply the updates
+    Object.assign(member, updateFields);
+    await member.save();
+
+    console.log("Member updated successfully");
+    return res
+        .status(200)
+        .json(new ApiResponse(200, member, "Member updated successfully"));
 });
 
 // Get all wings with leader and members
@@ -183,3 +267,36 @@ export const getAllWingMembers = asyncHandler(async (req, res) => {
             )
         );
 });
+
+export const deleteWingMember = asyncHandler(async (req, res) => {
+    const { memberId } = req.params;
+
+    const member = await WingMember.findById(memberId);
+    if (!member) throw new ApiError(404, "Wing member not found");
+
+    const wing = await Wing.findById(member.wing);
+
+    if(wing)
+        wing.members = wing.members.filter((id) => id.toString() !== memberId);
+    
+    await wing.save();
+    await member.remove();
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, member, "Wing member deleted successfully"));
+});
+
+export const deleteWing = asyncHandler(async (req, res) => {
+    const { wingId } = req.params;
+
+    const wing = await Wing.findById(wingId);
+    if (!wing) throw new ApiError(404, "Wing not found");
+
+    await wing.remove();
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, wing, "Wing deleted successfully"));
+        
+})

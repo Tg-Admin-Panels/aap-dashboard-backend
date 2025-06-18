@@ -6,12 +6,14 @@ const app = express();
 app.use(express.json());
 app.use(
     cors({
-        origin: ["http://localhost:5173"], // TODO: change this
+        origin: ["http://localhost:5173", "http://localhost:5500"], // TODO: change this
         credentials: true,
     })
 );
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 import wingRoutes from "./routes/wing.route.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -19,6 +21,7 @@ import volunteerRouter from "./routes/volunteer.routes.js";
 import memberRouter from "./routes/member.routes.js";
 import userRouter from "./routes/user.routes.js";
 import cookieParser from "cookie-parser";
+import bodyParser from "body-parser";
 
 app.use("/wings", wingRoutes);
 app.use("/volunteers", volunteerRouter);
