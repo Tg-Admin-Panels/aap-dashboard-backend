@@ -41,7 +41,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     if (!mobileNumber || !/^[6-9]\d{9}$/.test(mobileNumber)) {
         throw new ApiError(400, "Valid mobile number is required");
     }
-    if(!password) throw new ApiError(400, "Password is required");
+    if (!password) throw new ApiError(400, "Password is required");
 
     if (!zone || !["Urban", "Rural"].includes(zone)) {
         throw new ApiError(400, "Zone must be either 'Urban' or 'Rural'");
@@ -107,7 +107,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         villageName,
     });
 
-    if(!volunteer) throw new ApiError(500, "Failed to create volunteer");
+    if (!volunteer) throw new ApiError(500, "Failed to create volunteer");
 
     const user = await User.create({
         name: fullName,
@@ -120,10 +120,12 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     if (!user) {
         throw new ApiError(500, "Failed to create user");
     }
-    
-    return res.status(201).json(
-        new ApiResponse(201, volunteer, "Volunteer created successfully")
-    );
+
+    return res
+        .status(201)
+        .json(
+            new ApiResponse(201, volunteer, "Volunteer created successfully")
+        );
 });
 
 // READ ALL

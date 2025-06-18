@@ -35,6 +35,6 @@ router.post("/:wingId/member", upload.single("image"), addMember);
 router.put("/:wingId/leader-change", upload.single("image"), changeLeader);
 router.put("/members/update/:memberId", upload.single("image"), updateMember);
 router.delete("members/:memberId", deleteWingMember);
-router.delete("/:wingId", deleteWing);    
+router.delete("/:wingId", deleteWing);
 
 export default router;

@@ -199,14 +199,14 @@ export const updateMember = asyncHandler(async (req, res) => {
     if (post) updateFields.post = post;
     if (phone) updateFields.phone = phone;
 
-    console.log("Before updload")
+    console.log("Before updload");
     // Handle optional image update
     const imagePath = req.file?.path;
     if (imagePath) {
         const uploadedImage = await uploadOnCloudinary(imagePath);
         if (!uploadedImage) throw new ApiError(500, "Failed to upload image");
         updateFields.image = uploadedImage.secure_url;
-        console.log("After upload")
+        console.log("After upload");
     }
 
     // Apply the updates
@@ -276,9 +276,9 @@ export const deleteWingMember = asyncHandler(async (req, res) => {
 
     const wing = await Wing.findById(member.wing);
 
-    if(wing)
+    if (wing)
         wing.members = wing.members.filter((id) => id.toString() !== memberId);
-    
+
     await wing.save();
     await member.remove();
 
@@ -298,5 +298,4 @@ export const deleteWing = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(new ApiResponse(200, wing, "Wing deleted successfully"));
-        
-})
+});
