@@ -130,11 +130,30 @@ export const createVolunteer = asyncHandler(async (req, res) => {
 
 // READ ALL
 export const getAllVolunteers = asyncHandler(async (req, res) => {
-    const volunteers = await Volunteer.find();
+    const { search } = req.query;
+
+    // Build search condition
+    const query = {};
+    if (search) {
+        const searchRegex = new RegExp(search, "i"); // case-insensitive
+        query.$or = [
+            { fullName: searchRegex },
+            { mobileNumber: searchRegex },
+            { district: searchRegex },
+            { block: searchRegex },
+            { cityName: searchRegex },
+            { villageName: searchRegex },
+            { panchayat: searchRegex },
+        ];
+    }
+
+    const volunteers = await Volunteer.find(query);
+
     res.status(200).json(
-        new ApiResponse(200, volunteers, "All volunteers fetched")
+        new ApiResponse(200, volunteers, "Volunteers fetched successfully")
     );
 });
+
 
 // READ ONE
 export const getVolunteerById = asyncHandler(async (req, res) => {

@@ -50,15 +50,42 @@ export const createMember = asyncHandler(async (req, res) => {
 
 // Get All Members
 export const getAllMembers = asyncHandler(async (req, res) => {
-    const members = await Member.find().populate(
+    const { search } = req.query;
+
+    const query = {};
+
+    if (search) {
+        const regex = new RegExp(search, "i"); // case-insensitive search
+
+        query.$or = [
+            { name: regex },
+            { mobileNumber: regex },
+            { state: regex },
+            // We can't directly search volunteer fields here, but we can filter them after population
+        ];
+    }
+
+    let members = await Member.find(query).populate(
         "volunteerId",
         "fullName mobileNumber"
     );
+
+    // Optional: Filter by populated volunteer fields manually
+    // if (search) {
+    //     const regex = new RegExp(search, "i");
+    //     members = members.filter(
+    //         (member) =>
+    //             member.volunteerId &&
+    //             (regex.test(member.volunteerId.fullName) ||
+    //                 regex.test(member.volunteerId.mobileNumber))
+    //     );
+    // }
 
     return res
         .status(200)
         .json(new ApiResponse(200, members, "All members fetched"));
 });
+
 
 // Get Single Member
 export const getMemberById = asyncHandler(async (req, res) => {
@@ -86,20 +113,39 @@ export const getMembersJoinedBySelf = asyncHandler(async (req, res) => {
 });
 
 // Get All Members Joined By Specific Volunteer
+// Get All Members Joined By Specific Volunteer with optional search
 export const getMembersByVolunteer = asyncHandler(async (req, res) => {
     const { volunteerId } = req.params;
+    const { search } = req.query;
 
+    console.log("query", req.query);
+
+    // Check if the volunteer exists
     const volunteer = await Volunteer.findById(volunteerId);
     if (!volunteer) throw new ApiError(404, "Volunteer not found");
 
-    const members = await Member.find({
+    // Build base query
+    const query = {
         joinedBy: "volunteer",
         volunteerId,
-    }).populate("volunteerId", "fullName mobileNumber");
+    };
 
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, members, "Members joined by volunteer fetched")
-        );
+    // Add search filters if present
+    if (search) {
+        const searchRegex = new RegExp(search, "i");
+        query.$or = [
+            { name: searchRegex },
+            { mobileNumber: searchRegex },
+            { state: searchRegex },
+        ];
+    }
+
+    const members = await Member.find(query).populate(
+        "volunteerId",
+        "fullName mobileNumber"
+    );
+
+    return res.status(200).json(
+        new ApiResponse(200, members, "Members joined by volunteer fetched")
+    );
 });
