@@ -86,7 +86,6 @@ export const getAllMembers = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, members, "All members fetched"));
 });
 
-
 // Get Single Member
 export const getMemberById = asyncHandler(async (req, res) => {
     const { id } = req.params;
@@ -145,7 +144,9 @@ export const getMembersByVolunteer = asyncHandler(async (req, res) => {
         "fullName mobileNumber"
     );
 
-    return res.status(200).json(
-        new ApiResponse(200, members, "Members joined by volunteer fetched")
-    );
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, members, "Members joined by volunteer fetched")
+        );
 });

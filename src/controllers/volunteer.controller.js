@@ -154,7 +154,6 @@ export const getAllVolunteers = asyncHandler(async (req, res) => {
     );
 });
 
-
 // READ ONE
 export const getVolunteerById = asyncHandler(async (req, res) => {
     const volunteer = await Volunteer.findById(req.params.id);

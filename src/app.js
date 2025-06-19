@@ -24,6 +24,10 @@ import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 import dashboardRouter from "./routes/dashboard.routes.js";
 
+app.get("/", (req, res) => {
+    res.send("Welcome to AAP Bihar");
+})
+
 app.use("/wings", wingRoutes);
 app.use("/volunteers", volunteerRouter);
 app.use("/members", memberRouter);
