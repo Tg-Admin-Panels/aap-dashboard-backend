@@ -22,12 +22,13 @@ import memberRouter from "./routes/member.routes.js";
 import userRouter from "./routes/user.routes.js";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
+import dashboardRouter from "./routes/dashboard.routes.js";
 
 app.use("/wings", wingRoutes);
 app.use("/volunteers", volunteerRouter);
 app.use("/members", memberRouter);
 app.use("/users", userRouter);
-
+app.use("/dashboard", dashboardRouter);
 app.use(errorMiddleware);
 
 export default app;
