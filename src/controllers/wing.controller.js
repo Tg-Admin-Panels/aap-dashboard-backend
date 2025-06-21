@@ -46,6 +46,11 @@ export const addLeader = asyncHandler(async (req, res) => {
     if (wing.leader) throw new ApiError(400, "Wing already has a leader");
 
     console.log("leader added");
+    // checking wing member is not a member of that wing already
+    const member = await WingMember.findOne({ phone });
+    if (member) {
+        throw new ApiError(404, `Member already exit as ${member.role}`);
+    }
     const leader = await WingMember.create({
         name,
         role: "leader",
@@ -78,7 +83,7 @@ export const changeLeader = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are required");
     }
 
-    const wing = await Wing.findById(wingId);
+    const wing = await Wing.findById(wingId).populate('members');
     if (!wing) throw new ApiError(404, "Wing not found");
 
     // If there is an existing leader, demote them to 'member'
@@ -87,7 +92,7 @@ export const changeLeader = asyncHandler(async (req, res) => {
         if (currentLeader) {
             currentLeader.role = "member";
             await currentLeader.save();
-            wing.members.push(currentLeader._id);
+            wing.members.push(currentLeader);
         }
     }
 
@@ -100,6 +105,7 @@ export const changeLeader = asyncHandler(async (req, res) => {
 
         newLeader.role = "leader";
         await newLeader.save();
+        wing.members = wing.members.filter(l => String(l._id) !== String(memberId));
     } else {
         // Create new leader
         let uploadedImageUrl = "";
@@ -126,10 +132,10 @@ export const changeLeader = asyncHandler(async (req, res) => {
     // Update wing with new leader
     wing.leader = newLeader._id;
     await wing.save();
-
+    console.log(wing.members)
     return res
         .status(200)
-        .json(new ApiResponse(200, newLeader, "Leader updated successfully"));
+        .json(new ApiResponse(200, { leader: newLeader, members: wing.members }, "Leader updated successfully"));
 });
 
 export const getAllLeaders = asyncHandler(async (req, res) => {
@@ -160,6 +166,10 @@ export const addMember = asyncHandler(async (req, res) => {
     const wing = await Wing.findById(wingId);
     if (!wing) throw new ApiError(404, "Wing not found");
 
+    const isMemberExist = await WingMember.findOne({ phone });
+    if (isMemberExist) {
+        throw new ApiError(404, `Member already exit as ${isMemberExist.role}`);
+    }
     const member = await WingMember.create({
         name,
         role: "member",
@@ -221,7 +231,9 @@ export const updateMember = asyncHandler(async (req, res) => {
 
 // Get all wings with leader and members
 export const getAllWings = asyncHandler(async (req, res) => {
-    const wings = await Wing.find().populate("leader").populate("members");
+    const wings = await Wing.find().populate("leader").populate("members").sort({
+        createdAt: -1
+    });
 
     if (!wings) throw new ApiError(404, "No wings found");
 

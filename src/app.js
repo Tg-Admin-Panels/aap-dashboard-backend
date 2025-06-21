@@ -26,7 +26,7 @@ import dashboardRouter from "./routes/dashboard.routes.js";
 
 app.get("/", (req, res) => {
     res.send("Welcome to AAP Bihar");
-})
+});
 
 app.use("/wings", wingRoutes);
 app.use("/volunteers", volunteerRouter);
