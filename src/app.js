@@ -5,31 +5,33 @@ import bodyParser from "body-parser";
 
 const app = express();
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5500",
-  "https://admin.aapbihar.org"
-];
+// --- SIMPLE CORS SETUP ---
+// Automatically reflects request origin if CORS is allowed
+app.use(cors({ origin: true, credentials: true }));
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    console.log("CORS incoming origin:", origin);
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log("❌ Blocked by CORS:", origin);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-};
+// --- OPTIONAL: Advanced CORS (commented) ---
+// const allowedOrigins = [
+//   "http://localhost:5173",
+//   "http://localhost:5500",
+//   "https://admin.aapbihar.org"
+// ];
 
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     console.log("CORS incoming origin:", origin);
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       console.log("❌ Blocked by CORS:", origin);
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization"]
+// };
 
-app.use(cors(corsOptions));
-
-
+// app.use(cors(corsOptions));
 
 // ✅ Middleware
 app.use(express.json());
@@ -55,12 +57,6 @@ app.use("/volunteers", volunteerRouter);
 app.use("/members", memberRouter);
 app.use("/users", userRouter);
 app.use("/dashboard", dashboardRouter);
-app.all("/__debug", (req, res) => {
-  console.log("---- DEBUG HEADERS ----");
-  console.log(req.method, req.headers);
-  res.send("ok");
-});
-
 
 // ✅ Error handler
 app.use(errorMiddleware);
