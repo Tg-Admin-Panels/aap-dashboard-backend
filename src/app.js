@@ -4,9 +4,18 @@ import bodyParser from "body-parser";
 
 const app = express();
 
+
+console.log("This is AAP Bihar Backend")
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.url}`);
+  next();
+});
+
 // --- ✅ CUSTOM CORS MIDDLEWARE ---
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+console.log("This is origin")
+console.log(origin)
 
   if (origin) {
     res.setHeader("Access-Control-Allow-Origin", origin);
