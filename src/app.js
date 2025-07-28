@@ -1,37 +1,27 @@
 import express from "express";
-import cors from "cors";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 
 const app = express();
 
-// --- SIMPLE CORS SETUP ---
-// Automatically reflects request origin if CORS is allowed
-app.use(cors({ origin: true, credentials: true }));
+// --- ✅ CUSTOM CORS MIDDLEWARE ---
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-// --- OPTIONAL: Advanced CORS (commented) ---
-// const allowedOrigins = [
-//   "http://localhost:5173",
-//   "http://localhost:5500",
-//   "https://admin.aapbihar.org"
-// ];
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
 
-// const corsOptions = {
-//   origin: function (origin, callback) {
-//     console.log("CORS incoming origin:", origin);
-//     if (!origin || allowedOrigins.includes(origin)) {
-//       callback(null, true);
-//     } else {
-//       console.log("❌ Blocked by CORS:", origin);
-//       callback(new Error("Not allowed by CORS"));
-//     }
-//   },
-//   credentials: true,
-//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-//   allowedHeaders: ["Content-Type", "Authorization"]
-// };
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-// app.use(cors(corsOptions));
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 
 // ✅ Middleware
 app.use(express.json());
@@ -42,11 +32,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // ✅ Routes
 import wingRoutes from "./routes/wing.route.js";
-import { errorMiddleware } from "./middlewares/error.middleware.js";
 import volunteerRouter from "./routes/volunteer.routes.js";
 import memberRouter from "./routes/member.routes.js";
 import userRouter from "./routes/user.routes.js";
 import dashboardRouter from "./routes/dashboard.routes.js";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 app.get("/", (req, res) => {
   res.send("Welcome to AAP Bihar");
