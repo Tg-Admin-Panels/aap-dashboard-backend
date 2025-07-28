@@ -55,6 +55,12 @@ app.use("/volunteers", volunteerRouter);
 app.use("/members", memberRouter);
 app.use("/users", userRouter);
 app.use("/dashboard", dashboardRouter);
+app.all("/__debug", (req, res) => {
+  console.log("---- DEBUG HEADERS ----");
+  console.log(req.method, req.headers);
+  res.send("ok");
+});
+
 
 // ✅ Error handler
 app.use(errorMiddleware);
