@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(
     cors({
-        origin: ["http://localhost:5173", "http://localhost:5500"], // TODO: change this
+        origin: ["http://localhost:5173", "http://localhost:5500","https://admin.aapbihar.org"], // TODO: change this
         credentials: true,
     })
 );
