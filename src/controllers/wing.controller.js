@@ -6,20 +6,52 @@ import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/coudinary.js";
 
+const generateSlug = async (name) => {
+    let slug = name
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w\-]+/g, "");
+    let existingWing = await Wing.findOne({ slug });
+    let counter = 1;
+    while (existingWing) {
+        slug = `${slug}-${counter}`;
+        existingWing = await Wing.findOne({ slug });
+        counter++;
+    }
+    return slug;
+};
+
 // Create new wing
 export const createWing = asyncHandler(async (req, res) => {
-    const { name } = req.body;
+    const { name, hero, ourLeadersSection } = req.body;
 
     if (!name) throw new ApiError(400, "Wing name is required");
 
     const existing = await Wing.findOne({ name });
     if (existing) throw new ApiError(400, "Wing already exists");
 
-    const wing = await Wing.create({ name });
+    const slug = await generateSlug(name);
+
+    const wing = await Wing.create({ name, slug, hero, ourLeadersSection });
 
     return res
         .status(201)
         .json(new ApiResponse(201, wing, "Wing created successfully"));
+});
+
+// Get a single wing by ID
+export const getWingById = asyncHandler(async (req, res) => {
+    const { wingId } = req.params;
+
+    const wing = await Wing.findById(wingId)
+        .populate("leader")
+        .populate("members");
+
+    if (!wing) throw new ApiError(404, "Wing not found");
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, wing, "Wing fetched successfully"));
 });
 
 // Add a leader to a wing
@@ -83,7 +115,7 @@ export const changeLeader = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are required");
     }
 
-    const wing = await Wing.findById(wingId).populate('members');
+    const wing = await Wing.findById(wingId).populate("members");
     if (!wing) throw new ApiError(404, "Wing not found");
 
     // If there is an existing leader, demote them to 'member'
@@ -105,7 +137,9 @@ export const changeLeader = asyncHandler(async (req, res) => {
 
         newLeader.role = "leader";
         await newLeader.save();
-        wing.members = wing.members.filter(l => String(l._id) !== String(memberId));
+        wing.members = wing.members.filter(
+            (l) => String(l._id) !== String(memberId)
+        );
     } else {
         // Create new leader
         let uploadedImageUrl = "";
@@ -132,10 +166,16 @@ export const changeLeader = asyncHandler(async (req, res) => {
     // Update wing with new leader
     wing.leader = newLeader._id;
     await wing.save();
-    console.log(wing.members)
+    console.log(wing.members);
     return res
         .status(200)
-        .json(new ApiResponse(200, { leader: newLeader, members: wing.members }, "Leader updated successfully"));
+        .json(
+            new ApiResponse(
+                200,
+                { leader: newLeader, members: wing.members },
+                "Leader updated successfully"
+            )
+        );
 });
 
 export const getAllLeaders = asyncHandler(async (req, res) => {
@@ -231,9 +271,12 @@ export const updateMember = asyncHandler(async (req, res) => {
 
 // Get all wings with leader and members
 export const getAllWings = asyncHandler(async (req, res) => {
-    const wings = await Wing.find().populate("leader").populate("members").sort({
-        createdAt: -1
-    });
+    const wings = await Wing.find()
+        .populate("leader")
+        .populate("members")
+        .sort({
+            createdAt: -1,
+        });
 
     if (!wings) throw new ApiError(404, "No wings found");
 

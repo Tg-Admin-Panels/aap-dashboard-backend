@@ -11,6 +11,7 @@ import {
     updateMember,
     deleteWingMember,
     deleteWing,
+    getWingById,
 } from "../controllers/wing.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import {
@@ -23,6 +24,7 @@ const router = express.Router();
 // Route to get all members of a specific wing
 router.get("/", getAllWings);
 router.get("/all-leaders", getAllLeaders);
+router.get("/:wingId", getWingById);
 router.get("/:wingId/members", getWingMembers);
 
 // Admin Protected Routes

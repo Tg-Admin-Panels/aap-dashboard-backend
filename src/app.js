@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 
@@ -14,8 +15,8 @@ app.use((req, res, next) => {
 // --- ✅ CUSTOM CORS MIDDLEWARE ---
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-console.log("This is origin")
-console.log(origin)
+  console.log("This is origin")
+  console.log(origin)
 
   if (origin) {
     res.setHeader("Access-Control-Allow-Origin", origin);
@@ -34,6 +35,17 @@ console.log(origin)
 
 // ✅ Middleware
 app.use(express.json());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5500",
+      "http://127.0.0.1:5501",
+      "http://127.0.0.1:5500",
+    ], // TODO: change this
+    credentials: true,
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(bodyParser.json());
@@ -45,7 +57,11 @@ import volunteerRouter from "./routes/volunteer.routes.js";
 import memberRouter from "./routes/member.routes.js";
 import userRouter from "./routes/user.routes.js";
 import dashboardRouter from "./routes/dashboard.routes.js";
-import { errorMiddleware } from "./middlewares/error.middleware.js";
+import boothTeamRouter from "./routes/boothTeam.route.js";
+import stateRouter from "./routes/state.route.js";
+import districtRouter from "./routes/district.route.js";
+import legislativeAssemblyRouter from "./routes/legislativeAssembly.route.js";
+import boothRouter from "./routes/booth.route.js";
 
 app.get("/", (req, res) => {
   res.send("Welcome to AAP Bihar");
@@ -56,8 +72,11 @@ app.use("/volunteers", volunteerRouter);
 app.use("/members", memberRouter);
 app.use("/users", userRouter);
 app.use("/dashboard", dashboardRouter);
-
-// ✅ Error handler
+app.use("/booth-team", boothTeamRouter);
+app.use("/states", stateRouter);
+app.use("/districts", districtRouter);
+app.use("/legislative-assemblies", legislativeAssemblyRouter);
+app.use("/booths", boothRouter);
 app.use(errorMiddleware);
 
 export default app;
