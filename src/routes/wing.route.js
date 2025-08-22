@@ -5,7 +5,6 @@ import {
     addMember,
     getAllWings,
     getWingMembers,
-    getAllWingMembers,
     getAllLeaders,
     changeLeader,
     updateMember,
@@ -13,7 +12,6 @@ import {
     deleteWing,
     getWingById,
 } from "../controllers/wing.controller.js";
-import { upload } from "../middlewares/multer.middleware.js";
 import {
     ensureAdmin,
     ensureAuthenticated,
@@ -32,10 +30,18 @@ router.use(ensureAuthenticated);
 router.use(ensureAdmin);
 
 router.post("/", createWing);
-router.post("/:wingId/leader", upload.single("image"), addLeader);
-router.post("/:wingId/member", upload.single("image"), addMember);
-router.put("/:wingId/leader-change", upload.single("image"), changeLeader);
-router.put("/members/update/:memberId", upload.single("image"), updateMember);
+router.post("/:wingId/leader", addLeader);
+router.post("/:wingId/member", addMember);
+router.put(
+    "/:wingId/leader-change",
+    (req, res, next) => {
+        console.log("change leader");
+        console.log(req.body);
+        next();
+    },
+    changeLeader
+);
+router.put("/members/update/:memberId", updateMember);
 router.delete("members/:memberId", deleteWingMember);
 router.delete("/:wingId", deleteWing);
 

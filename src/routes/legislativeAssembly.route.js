@@ -1,5 +1,8 @@
 import express from "express";
-import { createLegislativeAssembly, getAllLegislativeAssemblies } from "../controllers/legislativeAssembly.controller.js";
+import {
+    createLegislativeAssembly,
+    getAllLegislativeAssemblies,
+} from "../controllers/legislativeAssembly.controller.js";
 
 const router = express.Router();
 

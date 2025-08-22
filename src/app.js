@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
-
+import fileUpload from "express-fileupload";
 const app = express();
 
 
@@ -46,6 +46,15 @@ app.use(
     credentials: true,
   })
 );
+
+app.use(
+    fileUpload({
+        useTempFiles: true,
+        tempFileDir: "/tmp/", // या अपनी choice का path
+        limits: { fileSize: 50 * 1024 * 1024 }, // max file 50 MB
+    })
+);
+
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(bodyParser.json());
@@ -62,6 +71,8 @@ import stateRouter from "./routes/state.route.js";
 import districtRouter from "./routes/district.route.js";
 import legislativeAssemblyRouter from "./routes/legislativeAssembly.route.js";
 import boothRouter from "./routes/booth.route.js";
+import cloudinaryRouter from "./routes/cloudinary.route.js";
+import visionRouter from "./routes/vision.routes.js";
 
 app.get("/", (req, res) => {
   res.send("Welcome to AAP Bihar");
@@ -77,6 +88,8 @@ app.use("/states", stateRouter);
 app.use("/districts", districtRouter);
 app.use("/legislative-assemblies", legislativeAssemblyRouter);
 app.use("/booths", boothRouter);
+app.use("/visions", visionRouter);
+app.use("/api/cloudinary", cloudinaryRouter);
 app.use(errorMiddleware);
 
 export default app;

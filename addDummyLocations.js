@@ -4,7 +4,8 @@ import District from "./src/models/district.model.js";
 import LegislativeAssembly from "./src/models/legislativeAssembly.model.js";
 import Booth from "./src/models/booth.model.js";
 
-const MONGO_URI = "mongodb+srv://rohit:Rohit1234@cluster0.5a6t3ge.mongodb.net/aap-bihar";
+const MONGO_URI =
+    "mongodb+srv://rohit:Rohit1234@cluster0.5a6t3ge.mongodb.net/aap-bihar";
 
 const connectDB = async () => {
     try {
@@ -34,22 +35,50 @@ const addDummyLocations = async () => {
         console.log("States added.");
 
         // Add Districts for Bihar
-        const patna = await District.create({ name: "Patna", code: "PTN", parentId: bihar._id });
-        const gaya = await District.create({ name: "Gaya", code: "GAY", parentId: bihar._id });
+        const patna = await District.create({
+            name: "Patna",
+            code: "PTN",
+            parentId: bihar._id,
+        });
+        const gaya = await District.create({
+            name: "Gaya",
+            code: "GAY",
+            parentId: bihar._id,
+        });
         console.log("Districts for Bihar added.");
 
         // Add Districts for Uttar Pradesh
-        const lucknow = await District.create({ name: "Lucknow", code: "LKO", parentId: up._id });
+        const lucknow = await District.create({
+            name: "Lucknow",
+            code: "LKO",
+            parentId: up._id,
+        });
         console.log("Districts for Uttar Pradesh added.");
 
         // Add Legislative Assemblies for Patna
-        const didarganj = await LegislativeAssembly.create({ name: "Didarganj", code: "DGJ", parentId: patna._id });
-        const bankipur = await LegislativeAssembly.create({ name: "Bankipur", code: "BKP", parentId: patna._id });
+        const didarganj = await LegislativeAssembly.create({
+            name: "Didarganj",
+            code: "DGJ",
+            parentId: patna._id,
+        });
+        const bankipur = await LegislativeAssembly.create({
+            name: "Bankipur",
+            code: "BKP",
+            parentId: patna._id,
+        });
         console.log("Legislative Assemblies for Patna added.");
 
         // Add Booths for Didarganj
-        await Booth.create({ name: "Booth 1A", code: "B1A", parentId: didarganj._id });
-        await Booth.create({ name: "Booth 1B", code: "B1B", parentId: didarganj._id });
+        await Booth.create({
+            name: "Booth 1A",
+            code: "B1A",
+            parentId: didarganj._id,
+        });
+        await Booth.create({
+            name: "Booth 1B",
+            code: "B1B",
+            parentId: didarganj._id,
+        });
         console.log("Booths for Didarganj added.");
 
         console.log("Dummy location data added successfully!");

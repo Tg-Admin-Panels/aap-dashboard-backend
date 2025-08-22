@@ -11,11 +11,10 @@ import {
     ensureAdmin,
     ensureAuthenticated,
 } from "../middlewares/auth.middleware.js";
-import { upload } from "../middlewares/multer.middleware.js";
 
 const router = express.Router();
 
-router.post("/", upload.single("profilePicture"), createVolunteer);
+router.post("/", createVolunteer);
 
 router.use(ensureAuthenticated);
 router.get("/", ensureAdmin, getAllVolunteers);

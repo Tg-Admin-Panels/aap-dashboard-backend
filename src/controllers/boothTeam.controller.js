@@ -4,7 +4,14 @@ import BoothTeam from "../models/boothTeam.model.js";
 export const createBoothTeamMember = async (req, res) => {
     try {
         const { name, phone, email, boothName, post, padnaam } = req.body;
-        const newMember = new BoothTeam({ name, phone, email, boothName, post, padnaam });
+        const newMember = new BoothTeam({
+            name,
+            phone,
+            email,
+            boothName,
+            post,
+            padnaam,
+        });
         await newMember.save();
         res.status(201).json({
             success: true,

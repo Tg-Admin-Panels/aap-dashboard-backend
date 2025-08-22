@@ -3,7 +3,6 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
 import User from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/coudinary.js";
 
 export const createVolunteer = asyncHandler(async (req, res) => {
     console.log("Create volunteer started", req.body);
@@ -26,6 +25,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         streetOrLocality,
         panchayat,
         villageName,
+        profilePicture, // Expect profilePicture directly in body
     } = req.body;
 
     // Basic required field validations
@@ -41,7 +41,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     if (!mobileNumber || !/^[6-9]\d{9}$/.test(mobileNumber)) {
         throw new ApiError(400, "Valid mobile number is required");
     }
-    if (!password) throw new ApiError(400, "Password is required");
+    // if (!password) throw new ApiError(400, "Password is required");
 
     if (!zone || !["Urban", "Rural"].includes(zone)) {
         throw new ApiError(400, "Zone must be either 'Urban' or 'Rural'");
@@ -53,11 +53,6 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     if (zone === "Urban") {
         if (!cityName)
             throw new ApiError(400, "City name is required for Urban zone");
-        // if (!streetOrLocality)
-        //     throw new ApiError(
-        //         400,
-        //         "Street or Locality is required for Urban zone"
-        //     );
     } else if (zone === "Rural") {
         if (!panchayat)
             throw new ApiError(400, "Panchayat is required for Rural zone");
@@ -76,14 +71,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         );
     }
 
-    const imagePath = req.file?.path;
-    if (!imagePath) throw new ApiError(400, "Image is required");
-
-    const uploadedImage = await uploadOnCloudinary(imagePath);
-
-    if (!uploadedImage) throw new ApiError(500, "Failed to upload image");
-
-    const profilePicture = uploadedImage.secure_url;
+    if (!profilePicture) throw new ApiError(400, "Profile picture is required");
 
     // If all validations pass
     const volunteer = await Volunteer.create({
@@ -113,7 +101,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         name: fullName,
         mobileNumber: mobileNumber,
         role: "volunteer",
-        password,
+        password: "12345",
         volunteer: volunteer._id,
     });
 
