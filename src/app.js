@@ -73,6 +73,8 @@ import legislativeAssemblyRouter from "./routes/legislativeAssembly.route.js";
 import boothRouter from "./routes/booth.route.js";
 import cloudinaryRouter from "./routes/cloudinary.route.js";
 import visionRouter from "./routes/vision.routes.js";
+import candidateApplicationRouter from "./routes/candidateApplication.routes.js";
+import campaignRouter from "./routes/campaign.routes.js";
 
 app.get("/", (req, res) => {
   res.send("Welcome to AAP Bihar");
@@ -90,6 +92,8 @@ app.use("/legislative-assemblies", legislativeAssemblyRouter);
 app.use("/booths", boothRouter);
 app.use("/visions", visionRouter);
 app.use("/api/cloudinary", cloudinaryRouter);
+app.use("/candidate-applications", candidateApplicationRouter);
+app.use("/campaigns", campaignRouter);
 app.use(errorMiddleware);
 
 export default app;
