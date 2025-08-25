@@ -169,9 +169,9 @@ export const updateCandidateApplicationStatus = asyncHandler(
             { status, notes },
             { new: true }
         )
-        .populate("state", "name")
-        .populate("district", "name")
-        .populate("legislativeAssembly", "name");
+            .populate("state", "name")
+            .populate("district", "name")
+            .populate("legislativeAssembly", "name");
 
         if (!application)
             throw new ApiError(404, "Candidate application not found");

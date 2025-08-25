@@ -22,7 +22,6 @@ const CtaSchema = new mongoose.Schema(
 const BulletSchema = new mongoose.Schema(
     {
         text: { type: String, required: true, trim: true },
-        icon: { type: String, trim: true }, // e.g. "check-circle", or your front-end icon key
     },
     { _id: false }
 );

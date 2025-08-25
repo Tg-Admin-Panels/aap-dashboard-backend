@@ -22,7 +22,9 @@ export const createCampaign = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Failed to create campaign");
     }
 
-    return res.status(201).json(new ApiResponse(201, campaign, "Campaign created successfully"));
+    return res
+        .status(201)
+        .json(new ApiResponse(201, campaign, "Campaign created successfully"));
 });
 
 // Get All Campaigns
@@ -37,7 +39,11 @@ export const getAllCampaigns = asyncHandler(async (req, res) => {
 
     const campaigns = await Campaign.find(query);
 
-    return res.status(200).json(new ApiResponse(200, campaigns, "Campaigns fetched successfully"));
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, campaigns, "Campaigns fetched successfully")
+        );
 });
 
 // Get Campaign by ID
@@ -49,7 +55,9 @@ export const getCampaignById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Campaign not found");
     }
 
-    return res.status(200).json(new ApiResponse(200, campaign, "Campaign fetched successfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, campaign, "Campaign fetched successfully"));
 });
 
 // Update Campaign
@@ -67,7 +75,9 @@ export const updateCampaign = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Campaign not found");
     }
 
-    return res.status(200).json(new ApiResponse(200, campaign, "Campaign updated successfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, campaign, "Campaign updated successfully"));
 });
 
 // Delete Campaign
@@ -82,7 +92,9 @@ export const deleteCampaign = asyncHandler(async (req, res) => {
     // Optionally, delete all comments associated with this campaign
     await Comment.deleteMany({ campaign: id });
 
-    return res.status(200).json(new ApiResponse(200, null, "Campaign deleted successfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, null, "Campaign deleted successfully"));
 });
 
 // Add Comment to Campaign
@@ -108,27 +120,41 @@ export const addCommentToCampaign = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Failed to add comment");
     }
 
-    return res.status(201).json(new ApiResponse(201, comment, "Comment added successfully"));
+    return res
+        .status(201)
+        .json(new ApiResponse(201, comment, "Comment added successfully"));
 });
 
 // Get Comments for Campaign
 export const getCommentsForCampaign = asyncHandler(async (req, res) => {
     const { id } = req.params; // Campaign ID
 
-    const comments = await Comment.find({ campaign: id }).sort({ createdAt: -1 });
+    const comments = await Comment.find({ campaign: id }).sort({
+        createdAt: -1,
+    });
 
-    return res.status(200).json(new ApiResponse(200, comments, "Comments fetched successfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, comments, "Comments fetched successfully"));
 });
 
 // Delete Comment from Campaign
 export const deleteCommentFromCampaign = asyncHandler(async (req, res) => {
     const { campaignId, commentId } = req.params;
 
-    const comment = await Comment.findOneAndDelete({ _id: commentId, campaign: campaignId });
+    const comment = await Comment.findOneAndDelete({
+        _id: commentId,
+        campaign: campaignId,
+    });
 
     if (!comment) {
-        throw new ApiError(404, "Comment not found or does not belong to this campaign");
+        throw new ApiError(
+            404,
+            "Comment not found or does not belong to this campaign"
+        );
     }
 
-    return res.status(200).json(new ApiResponse(200, null, "Comment deleted successfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, null, "Comment deleted successfully"));
 });

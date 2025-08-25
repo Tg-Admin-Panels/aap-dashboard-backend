@@ -10,13 +10,16 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         fullName,
         password,
         dateOfBirth,
-        age,
+
         gender,
         mobileNumber,
         zone,
         district,
         block,
-        religion,
+        whyYouWantToJoinUs,
+        howMuchTimeYouDedicate,
+        inWhichFieldYouCanContribute,
+        howCanYouHelpUs,
         wardNumber,
         boothNumber,
         pinCode,
@@ -31,7 +34,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     // Basic required field validations
     if (!fullName) throw new ApiError(400, "Full name is required");
     if (!dateOfBirth) throw new ApiError(400, "Date of birth is required");
-    if (!age) throw new ApiError(400, "Age is required");
+
     if (!gender || !["Male", "Female", "Other"].includes(gender)) {
         throw new ApiError(
             400,
@@ -77,13 +80,17 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     const volunteer = await Volunteer.create({
         fullName,
         dateOfBirth,
-        age,
+
         gender,
+        whyYouWantToJoinUs,
+        howMuchTimeYouDedicate,
+        inWhichFieldYouCanContribute,
+        howCanYouHelpUs,
         mobileNumber,
         zone,
         district,
         block,
-        religion,
+
         profilePicture,
         wardNumber,
         boothNumber,

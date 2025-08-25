@@ -4,14 +4,14 @@ const volunteerSchema = new mongoose.Schema(
     {
         fullName: { type: String, required: true },
         dateOfBirth: { type: Date, required: true },
-        age: { type: Number, required: true },
+
         gender: {
             type: String,
             enum: ["Male", "Female", "Other"],
             required: true,
         },
         mobileNumber: { type: String, required: true, match: /^[6-9]\d{9}$/ },
-        religion: { type: String },
+
         profilePicture: { type: String },
 
         zone: { type: String, enum: ["Urban", "Rural"], required: true },
@@ -35,6 +35,10 @@ const volunteerSchema = new mongoose.Schema(
             enum: ["active", "blocked"],
             default: "active",
         },
+        howCanYouHelpUs: { type: String },
+        inWhichFieldYouCanContribute: { type: String },
+        howMuchTimeYouDedicate: { type: String },
+        whyYouWantToJoinUs: { type: String },
     },
     { timestamps: true }
 );

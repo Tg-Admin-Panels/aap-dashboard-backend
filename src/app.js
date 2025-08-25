@@ -5,46 +5,51 @@ import bodyParser from "body-parser";
 import fileUpload from "express-fileupload";
 const app = express();
 
-
-console.log("This is AAP Bihar Backend")
+console.log("This is AAP Bihar Backend");
 app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.url}`);
-  next();
+    console.log(`[${req.method}] ${req.url}`);
+    next();
 });
 
 // --- ✅ CUSTOM CORS MIDDLEWARE ---
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  console.log("This is origin")
-  console.log(origin)
+    const origin = req.headers.origin;
+    console.log("This is origin");
+    console.log(origin);
 
-  if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
+    if (origin) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+    }
 
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    );
+    res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization"
+    );
 
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+    }
 
-  next();
+    next();
 });
 
 // ✅ Middleware
 app.use(express.json());
 app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5500",
-      "http://127.0.0.1:5501",
-      "http://127.0.0.1:5500",
-    ], // TODO: change this
-    credentials: true,
-  })
+    cors({
+        origin: [
+            "http://localhost:5173",
+            "http://localhost:5500",
+            "http://127.0.0.1:5501",
+            "http://127.0.0.1:5500",
+        ], // TODO: change this
+        credentials: true,
+    })
 );
 
 app.use(
@@ -75,9 +80,10 @@ import cloudinaryRouter from "./routes/cloudinary.route.js";
 import visionRouter from "./routes/vision.routes.js";
 import candidateApplicationRouter from "./routes/candidateApplication.routes.js";
 import campaignRouter from "./routes/campaign.routes.js";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 app.get("/", (req, res) => {
-  res.send("Welcome to AAP Bihar");
+    res.send("Welcome to AAP Bihar");
 });
 
 app.use("/wings", wingRoutes);
