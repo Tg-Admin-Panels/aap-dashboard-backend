@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 import fileUpload from "express-fileupload";
+import { v2 as cloudinary } from "cloudinary";
 const app = express();
 
 console.log("This is AAP Bihar Backend");
@@ -67,6 +68,11 @@ app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 // ✅ Routes
 import wingRoutes from "./routes/wing.route.js";
 import volunteerRouter from "./routes/volunteer.routes.js";
