@@ -85,3 +85,8 @@ export const getUserById = asyncHandler(async (req, res) => {
     if (!user) throw new ApiError(404, "User not found");
     res.status(200).json(new ApiResponse(200, user, "User fetched"));
 });
+
+export const logout = asyncHandler(async (req, res) => {
+    res.clearCookie("token", { httpOnly: true, secure: false, sameSite: "lax" });
+    res.status(200).json(new ApiResponse(200, {}, "User logged out"));
+});

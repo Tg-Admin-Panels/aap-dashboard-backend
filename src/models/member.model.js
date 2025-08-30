@@ -18,7 +18,7 @@ const memberSchema = new mongoose.Schema(
         },
         joinedBy: {
             type: String,
-            enum: ["self", "volunteer"],
+            enum: ["self", "volunteer", "admin"],
             required: true,
         },
         volunteerId: {

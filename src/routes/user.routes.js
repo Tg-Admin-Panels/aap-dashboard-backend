@@ -5,6 +5,7 @@ import {
     getUserById,
     getUsers,
     login,
+    logout,
 } from "../controllers/user.controller.js";
 import {
     ensureAuthenticated,
@@ -19,6 +20,7 @@ const router = Router();
 router.get("/me", ensureAuthenticated, getCurrentUser);
 
 router.route("/login").post(login);
+router.route("/logout").post(logout);
 
 router.use(ensureAuthenticated);
 router.route("/admin").post(createAdmin);

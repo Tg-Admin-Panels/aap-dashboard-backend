@@ -16,10 +16,10 @@ export const createMember = asyncHandler(async (req, res) => {
         );
     }
 
-    if (!["self", "volunteer"].includes(joinedBy)) {
+    if (!["self", "volunteer", "admin"].includes(joinedBy)) {
         throw new ApiError(
             status.BAD_REQUEST,
-            "joinedBy must be 'self' or 'volunteer'"
+            "joinedBy must be 'self', 'volunteer' or 'admin'"
         );
     }
 
@@ -149,4 +149,45 @@ export const getMembersByVolunteer = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(200, members, "Members joined by volunteer fetched")
         );
+});
+
+// Update Member
+export const updateMember = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { name, state, mobileNumber } = req.body;
+
+    const member = await Member.findByIdAndUpdate(
+        id,
+        {
+            $set: {
+                name,
+                state,
+                mobileNumber,
+            },
+        },
+        { new: true }
+    );
+
+    if (!member) {
+        throw new ApiError(404, "Member not found");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, member, "Member updated successfully"));
+});
+
+// Delete Member
+export const deleteMember = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const member = await Member.findByIdAndDelete(id);
+
+    if (!member) {
+        throw new ApiError(404, "Member not found");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Member deleted successfully"));
 });
