@@ -93,6 +93,7 @@ import cloudinaryRouter from "./routes/cloudinary.route.js";
 import visionRouter from "./routes/vision.routes.js";
 import candidateApplicationRouter from "./routes/candidateApplication.routes.js";
 import campaignRouter from "./routes/campaign.routes.js";
+import formRouter from "./routes/form.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 app.get("/", (req, res) => {
@@ -113,6 +114,7 @@ app.use("/visions", visionRouter);
 app.use("/api/cloudinary", cloudinaryRouter);
 app.use("/candidate-applications", candidateApplicationRouter);
 app.use("/campaigns", campaignRouter);
+app.use("/api/v1/forms", formRouter);
 app.use(errorMiddleware);
 
 export default app;

@@ -87,6 +87,10 @@ export const getUserById = asyncHandler(async (req, res) => {
 });
 
 export const logout = asyncHandler(async (req, res) => {
-    res.clearCookie("token", { httpOnly: true, secure: false, sameSite: "lax" });
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+    });
     res.status(200).json(new ApiResponse(200, {}, "User logged out"));
 });
