@@ -153,6 +153,31 @@ const getSubmissionById = asyncHandler(async (req, res) => {
         );
 });
 
+const deleteFormDefinition = asyncHandler(async (req, res) => {
+    const { formId } = req.params;
+    const { keepSubmissions } = req.query;
+    const form = await FormDefinition.findByIdAndDelete(formId);
+
+    if (!form) {
+        throw new ApiError(404, "Form definition not found.");
+    }
+
+    if (keepSubmissions !== "true") {
+        // Also delete all submissions associated with this form
+        await FormSubmission.deleteMany({ formId });
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "Form definition and associated submissions deleted successfully."
+            )
+        );
+});
+
 export {
     createFormDefinition,
     getAllFormDefinitions,
@@ -160,4 +185,5 @@ export {
     createFormSubmission,
     getFormSubmissions,
     getSubmissionById,
+    deleteFormDefinition,
 };

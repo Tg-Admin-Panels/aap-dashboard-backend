@@ -6,6 +6,7 @@ import {
     createFormSubmission,
     getFormSubmissions,
     getSubmissionById,
+    deleteFormDefinition,
 } from "../controllers/form.controller.js";
 
 const router = Router();
@@ -13,7 +14,10 @@ const router = Router();
 // Form Definition Routes
 router.route("/").post(createFormDefinition).get(getAllFormDefinitions);
 
-router.route("/:formId").get(getFormDefinitionById);
+router
+    .route("/:formId")
+    .get(getFormDefinitionById)
+    .delete(deleteFormDefinition);
 
 // Form Submission Routes
 router
