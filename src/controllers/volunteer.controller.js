@@ -44,7 +44,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
     if (!mobileNumber || !/^[6-9]\d{9}$/.test(mobileNumber)) {
         throw new ApiError(400, "Valid mobile number is required");
     }
-    // if (!password) throw new ApiError(400, "Password is required");
+    if (!password) throw new ApiError(400, "Password is required");
 
     if (!zone || !["Urban", "Rural"].includes(zone)) {
         throw new ApiError(400, "Zone must be either 'Urban' or 'Rural'");
@@ -108,7 +108,7 @@ export const createVolunteer = asyncHandler(async (req, res) => {
         name: fullName,
         mobileNumber: mobileNumber,
         role: "volunteer",
-        password: "12345",
+        password: password,
         volunteer: volunteer._id,
     });
 
