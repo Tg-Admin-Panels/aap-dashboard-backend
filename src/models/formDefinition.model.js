@@ -15,7 +15,16 @@ const fieldSchema = new Schema(
         type: {
             type: String,
             required: true,
-                enum: ["text", "email", "password", "number", "date", "textarea", "select", "file"],
+            enum: [
+                "text",
+                "email",
+                "password",
+                "number",
+                "date",
+                "textarea",
+                "select",
+                "file",
+            ],
         },
         options: {
             // Only used for 'select' type

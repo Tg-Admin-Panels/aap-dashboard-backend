@@ -5,9 +5,10 @@ import {
     getCampaignById,
     updateCampaign,
     deleteCampaign,
-    addCommentToCampaign,
-    getCommentsForCampaign,
-    deleteCommentFromCampaign,
+    addFeedbackFormToCampaign,
+    getFeedbackFormsForCampaign,
+    deleteFeedbackFormFromCampaign,
+    getFeedbackFormById,
 } from "../controllers/campaign.controller.js";
 import {
     ensureAdmin,
@@ -27,16 +28,19 @@ router
     .put(ensureAuthenticated, ensureAdmin, updateCampaign)
     .delete(ensureAuthenticated, ensureAdmin, deleteCampaign);
 
-// Comment routes
+// Feedback Form routes
 router
-    .route("/:id/comments")
-    .post(addCommentToCampaign)
-    .get(getCommentsForCampaign);
+    .route("/:id/feedback-forms")
+    .post(addFeedbackFormToCampaign)
+    .get(getFeedbackFormsForCampaign);
 router.delete(
-    "/:campaignId/comments/:commentId",
+    "/:campaignId/feedback-forms/:feedbackFormId",
     ensureAuthenticated,
     ensureAdmin,
-    deleteCommentFromCampaign
+    deleteFeedbackFormFromCampaign
 );
+router
+    .route("/:campaignId/feedback-forms/:feedbackFormId")
+    .get(getFeedbackFormById);
 
 export default router;

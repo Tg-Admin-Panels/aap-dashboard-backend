@@ -5,7 +5,7 @@ import {
     getFormDefinitionById,
     createFormSubmission,
     getFormSubmissions,
-    getSubmissionById
+    getSubmissionById,
 } from "../controllers/form.controller.js";
 
 const router = Router();

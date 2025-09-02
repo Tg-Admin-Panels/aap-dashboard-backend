@@ -1,5 +1,5 @@
 import Campaign from "../models/campaign.model.js";
-import Comment from "../models/comment.model.js";
+import FeedbackForm from "../models/FeedbackForm.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
@@ -89,21 +89,24 @@ export const deleteCampaign = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Campaign not found");
     }
 
-    // Optionally, delete all comments associated with this campaign
-    await Comment.deleteMany({ campaign: id });
+    // Delete all feedback forms associated with this campaign
+    await FeedbackForm.deleteMany({ campaign: id });
 
     return res
         .status(200)
         .json(new ApiResponse(200, null, "Campaign deleted successfully"));
 });
 
-// Add Comment to Campaign
-export const addCommentToCampaign = asyncHandler(async (req, res) => {
+// Add Feedback Form to Campaign
+export const addFeedbackFormToCampaign = asyncHandler(async (req, res) => {
     const { id } = req.params; // Campaign ID
-    const { text } = req.body;
+    const { name, mobile, state, district, vidhansabha, support } = req.body;
 
-    if (!text) {
-        throw new ApiError(400, "Comment text is required");
+    if (!name || !mobile || !state || !district || !vidhansabha) {
+        throw new ApiError(
+            400,
+            "All required feedback form fields are missing"
+        );
     }
 
     const campaign = await Campaign.findById(id);
@@ -111,50 +114,94 @@ export const addCommentToCampaign = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Campaign not found");
     }
 
-    const comment = await Comment.create({
+    const feedbackForm = await FeedbackForm.create({
         campaign: id,
-        text,
+        name,
+        mobile,
+        state,
+        district,
+        vidhansabha,
+        support: support || false, // Default to false if not provided
     });
 
-    if (!comment) {
-        throw new ApiError(500, "Failed to add comment");
+    if (!feedbackForm) {
+        throw new ApiError(500, "Failed to add feedback form");
     }
 
     return res
         .status(201)
-        .json(new ApiResponse(201, comment, "Comment added successfully"));
+        .json(
+            new ApiResponse(
+                201,
+                feedbackForm,
+                "Feedback form added successfully"
+            )
+        );
 });
 
-// Get Comments for Campaign
-export const getCommentsForCampaign = asyncHandler(async (req, res) => {
+// Get Feedback Forms for Campaign
+export const getFeedbackFormsForCampaign = asyncHandler(async (req, res) => {
     const { id } = req.params; // Campaign ID
 
-    const comments = await Comment.find({ campaign: id }).sort({
+    const feedbackForms = await FeedbackForm.find({ campaign: id }).sort({
         createdAt: -1,
     });
 
     return res
         .status(200)
-        .json(new ApiResponse(200, comments, "Comments fetched successfully"));
+        .json(
+            new ApiResponse(
+                200,
+                feedbackForms,
+                "Feedback forms fetched successfully"
+            )
+        );
 });
 
-// Delete Comment from Campaign
-export const deleteCommentFromCampaign = asyncHandler(async (req, res) => {
-    const { campaignId, commentId } = req.params;
+// Get Single Feedback Form by ID
+export const getFeedbackFormById = asyncHandler(async (req, res) => {
+    const { campaignId, feedbackFormId } = req.params;
 
-    const comment = await Comment.findOneAndDelete({
-        _id: commentId,
+    const feedbackForm = await FeedbackForm.findOne({
+        _id: feedbackFormId,
         campaign: campaignId,
     });
 
-    if (!comment) {
+    if (!feedbackForm) {
         throw new ApiError(
             404,
-            "Comment not found or does not belong to this campaign"
+            "Feedback form not found or does not belong to this campaign"
         );
     }
 
     return res
         .status(200)
-        .json(new ApiResponse(200, null, "Comment deleted successfully"));
+        .json(
+            new ApiResponse(
+                200,
+                feedbackForm,
+                "Feedback form fetched successfully"
+            )
+        );
+});
+
+// Delete Feedback Form from Campaign
+export const deleteFeedbackFormFromCampaign = asyncHandler(async (req, res) => {
+    const { campaignId, feedbackFormId } = req.params;
+
+    const feedbackForm = await FeedbackForm.findOneAndDelete({
+        _id: feedbackFormId,
+        campaign: campaignId,
+    });
+
+    if (!feedbackForm) {
+        throw new ApiError(
+            404,
+            "Feedback form not found or does not belong to this campaign"
+        );
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, null, "Feedback form deleted successfully"));
 });

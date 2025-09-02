@@ -129,14 +129,14 @@ const getFormSubmissions = asyncHandler(async (req, res) => {
         );
 });
 
-
 // @desc    Get a single submission by ID
 // @route   GET /api/v1/submissions/:submissionId
 // @access  Public
 const getSubmissionById = asyncHandler(async (req, res) => {
     const { submissionId } = req.params;
 
-    const submission = await FormSubmission.findById(submissionId).populate('formId');
+    const submission =
+        await FormSubmission.findById(submissionId).populate("formId");
 
     if (!submission) {
         throw new ApiError(404, "Submission not found.");
@@ -144,7 +144,13 @@ const getSubmissionById = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(new ApiResponse(200, submission, "Submission retrieved successfully."));
+        .json(
+            new ApiResponse(
+                200,
+                submission,
+                "Submission retrieved successfully."
+            )
+        );
 });
 
 export {
@@ -153,5 +159,5 @@ export {
     getFormDefinitionById,
     createFormSubmission,
     getFormSubmissions,
-    getSubmissionById
+    getSubmissionById,
 };
