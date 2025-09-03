@@ -105,17 +105,36 @@ const createFormSubmission = asyncHandler(async (req, res) => {
 // @access  Public
 const getFormSubmissions = asyncHandler(async (req, res) => {
     const { formId } = req.params;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
 
     const formDef = await FormDefinition.findById(formId);
     if (!formDef) {
         throw new ApiError(404, "Form definition not found.");
     }
 
-    const submissions = await FormSubmission.find({ formId });
+    const submissions = await FormSubmission.find({ formId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+    const totalSubmissions = await FormSubmission.countDocuments({ formId });
+    const totalPages = Math.ceil(totalSubmissions / limit);
 
     const response = {
         formDefinition: formDef,
         submissions: submissions,
+        pagination: {
+            totalDocs: totalSubmissions,
+            limit: limit,
+            page: page,
+            totalPages: totalPages,
+            hasNextPage: page < totalPages,
+            nextPage: page < totalPages ? page + 1 : null,
+            hasPrevPage: page > 1,
+            prevPage: page > 1 ? page - 1 : null,
+        },
     };
 
     return res
@@ -178,6 +197,59 @@ const deleteFormDefinition = asyncHandler(async (req, res) => {
         );
 });
 
+// @desc    Create multiple form submissions in bulk
+// @route   POST /api/v1/forms/:formId/submissions/bulk
+// @access  Private
+const bulkCreateSubmissions = asyncHandler(async (req, res) => {
+    const { formId } = req.params;
+    const { submissions } = req.body;
+
+    if (!submissions || !Array.isArray(submissions) || submissions.length === 0) {
+        throw new ApiError(400, "Submissions array cannot be empty.");
+    }
+
+    const formDef = await FormDefinition.findById(formId);
+    if (!formDef) {
+        throw new ApiError(404, "Form definition not found.");
+    }
+
+    // Optional: Add more robust validation against formDef.fields here
+
+    const submissionsToInsert = submissions.map(sub => ({
+        formId: formId,
+        data: sub.data,
+    }));
+
+    const createdSubmissions = await FormSubmission.insertMany(submissionsToInsert);
+
+    return res
+        .status(201)
+        .json(
+            new ApiResponse(
+                201,
+                { count: createdSubmissions.length },
+                "Submissions created successfully."
+            )
+        );
+});
+
+// @desc    Delete a single submission by ID
+// @route   DELETE /api/v1/forms/submissions/:submissionId
+// @access  Private
+const deleteSubmissionById = asyncHandler(async (req, res) => {
+    const { submissionId } = req.params;
+
+    const submission = await FormSubmission.findByIdAndDelete(submissionId);
+
+    if (!submission) {
+        throw new ApiError(404, "Submission not found.");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Submission deleted successfully."));
+});
+
 export {
     createFormDefinition,
     getAllFormDefinitions,
@@ -186,4 +258,6 @@ export {
     getFormSubmissions,
     getSubmissionById,
     deleteFormDefinition,
+    bulkCreateSubmissions,
+    deleteSubmissionById,
 };

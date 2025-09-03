@@ -7,6 +7,8 @@ import {
     getFormSubmissions,
     getSubmissionById,
     deleteFormDefinition,
+    bulkCreateSubmissions,
+    deleteSubmissionById
 } from "../controllers/form.controller.js";
 
 const router = Router();
@@ -25,7 +27,9 @@ router
     .post(createFormSubmission)
     .get(getFormSubmissions);
 
+router.route("/:formId/submissions/bulk").post(bulkCreateSubmissions);
+
 // Route for a single submission
-router.route("/submissions/:submissionId").get(getSubmissionById);
+router.route("/submissions/:submissionId").get(getSubmissionById).delete(deleteSubmissionById);
 
 export default router;
