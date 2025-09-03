@@ -9,8 +9,9 @@ import {
     deleteFormDefinition,
     bulkCreateSubmissions,
     deleteSubmissionById,
-    uploadChunk,
+
 } from "../controllers/form.controller.js";
+import { uploadChunk } from "../controllers/upload.controller.js";
 
 const router = Router();
 
