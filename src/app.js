@@ -20,7 +20,7 @@ app.use((req, res, next) => {
 
     if (origin) {
         res.setHeader("Access-Control-Allow-Origin", origin);
-    }
+    };
 
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader(
@@ -40,7 +40,7 @@ app.use((req, res, next) => {
 });
 
 // ✅ Middleware
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(
     cors({
         origin: [
@@ -63,10 +63,10 @@ app.use(
     })
 );
 
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(bodyParser.json()); // Removed
+// app.use(bodyParser.urlencoded({ extended: true })); // Removed
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

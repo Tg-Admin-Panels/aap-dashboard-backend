@@ -8,7 +8,8 @@ import {
     getSubmissionById,
     deleteFormDefinition,
     bulkCreateSubmissions,
-    deleteSubmissionById
+    deleteSubmissionById,
+    uploadChunk,
 } from "../controllers/form.controller.js";
 
 const router = Router();
@@ -28,8 +29,12 @@ router
     .get(getFormSubmissions);
 
 router.route("/:formId/submissions/bulk").post(bulkCreateSubmissions);
+router.route("/:formId/submissions/upload-chunk").post(uploadChunk);
 
 // Route for a single submission
-router.route("/submissions/:submissionId").get(getSubmissionById).delete(deleteSubmissionById);
+router
+    .route("/submissions/:submissionId")
+    .get(getSubmissionById)
+    .delete(deleteSubmissionById);
 
 export default router;

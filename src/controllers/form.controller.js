@@ -3,6 +3,14 @@ import { FormSubmission } from "../models/formSubmission.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import * as Papa from 'papaparse';
+import XLSX from 'xlsx';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // @desc    Create a new form definition
 // @route   POST /api/v1/forms
@@ -204,7 +212,11 @@ const bulkCreateSubmissions = asyncHandler(async (req, res) => {
     const { formId } = req.params;
     const { submissions } = req.body;
 
-    if (!submissions || !Array.isArray(submissions) || submissions.length === 0) {
+    if (
+        !submissions ||
+        !Array.isArray(submissions) ||
+        submissions.length === 0
+    ) {
         throw new ApiError(400, "Submissions array cannot be empty.");
     }
 
@@ -215,12 +227,13 @@ const bulkCreateSubmissions = asyncHandler(async (req, res) => {
 
     // Optional: Add more robust validation against formDef.fields here
 
-    const submissionsToInsert = submissions.map(sub => ({
+    const submissionsToInsert = submissions.map((sub) => ({
         formId: formId,
         data: sub.data,
     }));
 
-    const createdSubmissions = await FormSubmission.insertMany(submissionsToInsert);
+    const createdSubmissions =
+        await FormSubmission.insertMany(submissionsToInsert);
 
     return res
         .status(201)
@@ -250,6 +263,106 @@ const deleteSubmissionById = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "Submission deleted successfully."));
 });
 
+const uploadChunk = asyncHandler(async (req, res) => {
+    const { formId } = req.params;
+    const { chunk, isLastChunk, originalname } = req.body;
+    const tempDir = path.join(__dirname, "..", "tmp");
+    if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+    }
+    const tempFilePath = path.join(tempDir, `${formId}-${originalname}`);
+
+    fs.appendFileSync(tempFilePath, Buffer.from(chunk, "base64"));
+
+    if (isLastChunk === "true") {
+        try {
+            const formDef = await FormDefinition.findById(formId);
+            if (!formDef) {
+                throw new ApiError(404, "Form definition not found.");
+            }
+
+            let parsedData;
+            let fileHeaders;
+
+            if (originalname.endsWith(".csv")) {
+                const fileContent = fs.readFileSync(tempFilePath, "utf8");
+                parsedData = Papa.parse(fileContent, {
+                    header: true,
+                    skipEmptyLines: true,
+                }).data;
+                fileHeaders = Object.keys(parsedData[0] || {}).map(h => h.trim());
+            } else if (originalname.endsWith(".xlsx")) {
+                const workbook = XLSX.readFile(tempFilePath);
+                const sheetName = workbook.SheetNames[0];
+                parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                fileHeaders = Object.keys(parsedData[0] || {}).map(h => h.trim());
+            } else {
+                throw new ApiError(400, "Unsupported file type. Only CSV and XLSX are supported.");
+            }
+
+            if (!parsedData || parsedData.length === 0) {
+                throw new ApiError(400, "Uploaded file is empty or improperly formatted.");
+            }
+
+            const definedHeaders = formDef.fields.map(field => field.label);
+
+            console.log("Parsed Data (first row):", parsedData[0]);
+            console.log("File Headers:", fileHeaders);
+            console.log("Defined Headers (from formDef):", definedHeaders);
+
+            // Basic header validation: check if all defined headers are present in the file
+            const missingHeaders = definedHeaders.filter(
+                (header) => !fileHeaders.includes(header)
+            );
+
+            if (missingHeaders.length > 0) {
+                throw new ApiError(
+                    400,
+                    `Missing required headers in the uploaded file: ${missingHeaders.join(", ")}`
+                );
+            }
+
+            const submissionsToInsert = parsedData.map((row) => {
+                const data = {};
+                definedHeaders.forEach(header => {
+                    data[header] = row[header] !== undefined ? row[header] : "N/A";
+                });
+                return {
+                    formId: formId,
+                    data: data,
+                };
+            });
+
+            await FormSubmission.insertMany(submissionsToInsert);
+
+            fs.unlinkSync(tempFilePath); // Clean up the temp file
+
+            return res
+                .status(200)
+                .json(
+                    new ApiResponse(
+                        200,
+                        { count: submissionsToInsert.length },
+                        "File processed and data inserted successfully."
+                    )
+                );
+        } catch (error) {
+            // Clean up the temp file in case of an error during processing
+            if (fs.existsSync(tempFilePath)) {
+                fs.unlinkSync(tempFilePath);
+            }
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(500, `Error processing file: ${error.message}`);
+        }
+    }
+
+    res.status(200).json(
+        new ApiResponse(200, {}, "Chunk uploaded successfully.")
+    );
+});
+
 export {
     createFormDefinition,
     getAllFormDefinitions,
@@ -260,4 +373,5 @@ export {
     deleteFormDefinition,
     bulkCreateSubmissions,
     deleteSubmissionById,
+    uploadChunk,
 };
