@@ -10,11 +10,7 @@ import {
     bulkCreateSubmissions,
     deleteSubmissionById,
 } from "../controllers/form.controller.js";
-import {
-    uploadChunk,
-
-
-} from "../controllers/upload.controller.js";
+import { uploadChunk } from "../controllers/upload.controller.js";
 import { handleSseConnection } from "../controllers/sse.controller.js";
 import { uploadComplete } from "../controllers/uploadComplete.controller.js";
 

@@ -1,4 +1,4 @@
-// controllers/xlsxUpload.controller.js
+// controllers/realXlsxUpload.controller.js
 
 import ExcelJS from "exceljs";
 import { PassThrough } from "stream";
@@ -9,23 +9,15 @@ import { FormSubmission } from "../models/formSubmission.model.js";
 import { FormDefinition } from "../models/formDefinition.model.js";
 import { uploadSessions } from "../utils/uploadSessions.js";
 import { sendSseProgress } from "../utils/sseProgress.js";
-
-// ======= Tuning =======
-const XLSX_BATCH_SIZE = 500; // rows per batch
-
-// ======= Helpers =======
-const toCamelCase = (str) =>
-    String(str || "")
-        .toLowerCase()
-        .replace(/[^a-zA-Z0-9]+(.)?/g, (m, chr) =>
-            chr ? chr.toUpperCase() : ""
-        )
-        .replace(/^./, (s) => s.toLowerCase());
-const normalizeHeader = (h) => String(h || "").trim();
-const toBool = (v) => v === true || v === "true" || v === "1";
+import {
+    XLSX_BATCH_SIZE,
+    toBool,
+    toCamelCase,
+    normalizeHeader,
+} from "../utils/uploadHelpers.js";
 
 /**
- * POST /api/upload/xlsx/:formId
+ * POST /api/v1/forms/:formId/submissions/upload-chunk
  * Body: { originalname, chunk (base64), isLastChunk }
  */
 export const xlsxFileUpload = asyncHandler(async (req, res) => {
@@ -38,17 +30,16 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
             "Missing required fields: originalname or chunk."
         );
     }
+    if (!originalname.toLowerCase().endsWith(".xlsx")) {
+        throw new ApiError(400, "Unsupported file type for this endpoint.");
+    }
 
     const last = toBool(isLastChunk);
     const sessionId = `${formId}-${originalname}`;
     let session = uploadSessions.get(sessionId);
 
-    // INIT
+    // INIT session
     if (!session) {
-        if (!originalname.toLowerCase().endsWith(".xlsx")) {
-            throw new ApiError(400, "Unsupported file type for this endpoint.");
-        }
-
         const formDef = await FormDefinition.findById(formId);
         if (!formDef) throw new ApiError(404, "Form definition not found.");
 
@@ -60,6 +51,7 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
             definedHeaders: formDef.fields.map((f) => normalizeHeader(f.label)),
             totalRowsProcessed: 0,
 
+            // streaming/bookkeeping
             excelStream: null,
             workbookReader: null,
             xlsxBatch: [],
@@ -70,11 +62,13 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
             xlsxChunkCount: 0,
             worksheetsSeen: 0,
             rowsSeen: 0,
+            totalRow: 0,
             batchesFlushed: 0,
+            processedBytes: 0, // <= increment as we feed binary bytes to the reader
         };
         uploadSessions.set(sessionId, session);
 
-        // streaming setup
+        // Setup streaming reader
         session.excelStream = new PassThrough();
         session.endPromise = new Promise((resolve, reject) => {
             session.resolveEnd = resolve;
@@ -96,11 +90,9 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
 
         session.workbookReader.on("worksheet", (worksheet) => {
             session.worksheetsSeen += 1;
-
             if (processedFirstSheet) {
-                // Drain others silently (only first sheet is processed)
-                worksheet.on("row", () => {});
-                worksheet.on("finished", () => {});
+                worksheet.on("row", () => { });
+                worksheet.on("finished", () => { });
                 return;
             }
             processedFirstSheet = true;
@@ -117,7 +109,6 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
 
                     if (!session.headersValidated) {
                         session.headers = rowData.map(normalizeHeader);
-
                         const missing = session.definedHeaders.filter(
                             (h) => !session.headers.includes(h)
                         );
@@ -131,10 +122,10 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
                             return;
                         }
                         session.headersValidated = true;
-                        return; // skip header row from insertion
+                        return; // skip header row
                     }
 
-                    // data row
+                    // Data row
                     const data = {};
                     session.definedHeaders.forEach((h) => {
                         const idx = session.headers.indexOf(h);
@@ -160,8 +151,9 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
                             session.totalRowsProcessed += toInsert.length;
                             session.batchesFlushed += 1;
                             sendSseProgress(formId, {
-                                processedRows: session.totalRowsProcessed,
                                 status: "processing",
+                                processedRows: session.totalRowsProcessed,
+                                processedBytes: session.processedBytes,
                             });
                         } finally {
                             session.inserting = false;
@@ -185,8 +177,9 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
                             session.totalRowsProcessed += toInsert.length;
                             session.batchesFlushed += 1;
                             sendSseProgress(formId, {
-                                processedRows: session.totalRowsProcessed,
                                 status: "processing",
+                                processedRows: session.totalRowsProcessed,
+                                processedBytes: session.processedBytes,
                             });
                         } finally {
                             session.inserting = false;
@@ -209,15 +202,31 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
 
         // start reader after listeners attached
         setImmediate(() => {
-            session.workbookReader.read();
+            try {
+                session.workbookReader.read();
+            } catch (err) {
+                session.rejectEnd?.(err);
+            }
         });
     }
 
-    // STREAMING XLSX
+    // Receive binary chunk, feed to reader, and count bytes
     session.xlsxChunkCount += 1;
-
     const buf = Buffer.from(chunk, "base64");
     session.excelStream.write(buf);
+    session.processedBytes += buf.length;
+
+    console.log(`sendSSe: ${JSON.stringify({
+        status: "processing",
+        processedRows: session.totalRowsProcessed,
+        processedBytes: session.processedBytes,
+    })}`)
+    // Intermediate SSE ping for smoother UI
+    sendSseProgress(formId, {
+        status: "processing",
+        processedRows: session.totalRowsProcessed, // may trail inserts
+        processedBytes: session.processedBytes, // exact bytes fed to parser
+    });
 
     if (!last) {
         return res
@@ -225,13 +234,19 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
             .json(new ApiResponse(200, {}, "XLSX chunk received."));
     }
 
-    // last chunk
+    // Last chunk: close and await all flushes
     try {
         session.excelStream.end();
         await session.endPromise;
+
         const count = session.totalRowsProcessed;
 
-        sendSseProgress(formId, { processedRows: count, status: "completed" });
+        sendSseProgress(formId, {
+            status: "completed",
+            processedRows: count,
+            processedBytes: session.processedBytes,
+        });
+
         uploadSessions.delete(sessionId);
 
         return res

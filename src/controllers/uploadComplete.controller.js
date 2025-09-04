@@ -1,4 +1,5 @@
 // controllers/uploadComplete.controller.js
+
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { uploadSessions } from "../utils/uploadSessions.js";
@@ -12,14 +13,13 @@ export const uploadComplete = asyncHandler(async (req, res) => {
     const session = uploadSessions.get(sessionId);
 
     if (session) {
-        console.log(`[UPLOAD_COMPLETE] Session for ${sessionId} marked complete.`);
+        // emit a final "completed" if not already emitted
         sendSseProgress(formId, {
-            processedRows: session.totalRowsProcessed,
             status: "completed",
+            processedRows: session.totalRowsProcessed,
+            processedBytes: session.processedBytes || 0,
         });
         uploadSessions.delete(sessionId);
-    } else {
-        console.warn(`[UPLOAD_COMPLETE] No active session found for ${sessionId}.`);
     }
 
     return res

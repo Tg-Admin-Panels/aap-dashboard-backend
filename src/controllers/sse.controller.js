@@ -1,6 +1,5 @@
 // controllers/sse.controller.js
 import asyncHandler from "../utils/asyncHandler.js";
-import ApiResponse from "../utils/ApiResponse.js";
 import { sseClients } from "../utils/sseProgress.js";
 
 export const handleSseConnection = asyncHandler(async (req, res) => {
@@ -16,13 +15,12 @@ export const handleSseConnection = asyncHandler(async (req, res) => {
     sseClients.get(formId).add(res);
 
     // initial ping
-    res.write('data: {"message": "Connected to SSE stream"}\n\n');
+    res.write('data: {"message":"Connected to SSE stream"}\n\n');
 
     req.on("close", () => {
         const set = sseClients.get(formId);
-        if (set) {
-            set.delete(res);
-            if (set.size === 0) sseClients.delete(formId);
-        }
+        if (!set) return;
+        set.delete(res);
+        if (set.size === 0) sseClients.delete(formId);
     });
 });

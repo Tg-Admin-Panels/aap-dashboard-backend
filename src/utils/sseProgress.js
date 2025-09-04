@@ -7,7 +7,12 @@ export const sseClients = new Map();
 export const sendSseProgress = (formId, data) => {
     const clients = sseClients.get(formId);
     if (!clients) return;
+    const payload = `data: ${JSON.stringify(data)}\n\n`;
     for (const res of clients) {
-        res.write(`data: ${JSON.stringify(data)}\n\n`);
+        try {
+            res.write(payload);
+        } catch (_) {
+            // client may have disconnected
+        }
     }
 };
