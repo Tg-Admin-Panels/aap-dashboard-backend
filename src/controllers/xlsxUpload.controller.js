@@ -91,8 +91,8 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
         session.workbookReader.on("worksheet", (worksheet) => {
             session.worksheetsSeen += 1;
             if (processedFirstSheet) {
-                worksheet.on("row", () => { });
-                worksheet.on("finished", () => { });
+                worksheet.on("row", () => {});
+                worksheet.on("finished", () => {});
                 return;
             }
             processedFirstSheet = true;
@@ -216,11 +216,13 @@ export const xlsxFileUpload = asyncHandler(async (req, res) => {
     session.excelStream.write(buf);
     session.processedBytes += buf.length;
 
-    console.log(`sendSSe: ${JSON.stringify({
-        status: "processing",
-        processedRows: session.totalRowsProcessed,
-        processedBytes: session.processedBytes,
-    })}`)
+    console.log(
+        `sendSSe: ${JSON.stringify({
+            status: "processing",
+            processedRows: session.totalRowsProcessed,
+            processedBytes: session.processedBytes,
+        })}`
+    );
     // Intermediate SSE ping for smoother UI
     sendSseProgress(formId, {
         status: "processing",
