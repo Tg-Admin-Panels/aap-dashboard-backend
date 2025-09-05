@@ -24,7 +24,7 @@ const fieldSchema = new Schema(
                 "textarea",
                 "select",
                 "file",
-                'checkbox'
+                "checkbox",
             ],
         },
         options: {

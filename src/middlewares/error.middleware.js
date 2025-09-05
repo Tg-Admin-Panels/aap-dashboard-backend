@@ -10,7 +10,7 @@ function normalizeMongoError(err) {
         const fields = Object.keys(err?.keyValue || {});
         const fieldList = fields.length ? fields.join(", ") : "unique field";
         const details = { fields, keyValue: err.keyValue };
-        return new ApiError(409, `Duplicate value for ${fieldList}.`, details);
+        return new ApiError(409, `${fieldList} is already exist in db.`, details);
     }
 
     // Mongoose validation error (schema validators)
