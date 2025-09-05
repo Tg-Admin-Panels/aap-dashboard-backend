@@ -35,8 +35,7 @@ export const login = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
                 {
-                    ...safeUser,
-                    token,
+                    ...safeUser
                 },
                 "User logged in"
             )
