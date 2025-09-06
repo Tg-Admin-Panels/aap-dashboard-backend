@@ -10,9 +10,7 @@ import {
     bulkCreateSubmissions,
     deleteSubmissionById,
 } from "../controllers/form.controller.js";
-import { uploadChunk } from "../controllers/upload.controller.js";
-import { handleSseConnection } from "../controllers/sse.controller.js";
-import { uploadComplete } from "../controllers/uploadComplete.controller.js";
+
 
 const router = Router();
 
@@ -31,9 +29,6 @@ router
     .get(getFormSubmissions);
 
 router.route("/:formId/submissions/bulk").post(bulkCreateSubmissions);
-router.route("/:formId/submissions/upload-chunk").post(uploadChunk);
-router.route("/:formId/submissions/events").get(handleSseConnection); // SSE endpoint
-router.route("/:formId/submissions/upload-complete").post(uploadComplete); // Upload complete endpoint
 
 // Route for a single submission
 router

@@ -2,7 +2,8 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
-import fileUpload from "express-fileupload";
+import multer from "multer";
+import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 const app = express();
 
@@ -35,7 +36,6 @@ app.use((req, res, next) => {
     if (req.method === "OPTIONS") {
         return res.sendStatus(204);
     }
-
     next();
 });
 
@@ -55,13 +55,22 @@ app.use(
     })
 );
 
-app.use(
-    fileUpload({
-        useTempFiles: true,
-        tempFileDir: "/tmp/", // या अपनी choice का path
-        limits: { fileSize: 50 * 1024 * 1024 }, // max file 50 MB
-    })
-);
+// Define storage for multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, path.join(process.cwd(), 'tmp', 'uploads'));
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 50 * 1024 * 1024 } // 50 MB
+});
+
+export const uploadMiddleware = upload;
 
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
@@ -95,6 +104,8 @@ import candidateApplicationRouter from "./routes/candidateApplication.routes.js"
 import campaignRouter from "./routes/campaign.routes.js";
 import formRouter from "./routes/form.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
+import setupUploadModule from "./file-upload-module/index.js";
+import { myDataHandler } from "./utils/dataHandler.js";
 
 app.get("/", (req, res) => {
     res.send("Welcome to AAP Bihar");
@@ -115,6 +126,7 @@ app.use("/api/cloudinary", cloudinaryRouter);
 app.use("/candidate-applications", candidateApplicationRouter);
 app.use("/campaigns", campaignRouter);
 app.use("/api/v1/forms", formRouter);
+setupUploadModule(app, myDataHandler)
 app.use(errorMiddleware);
 
 export default app;
