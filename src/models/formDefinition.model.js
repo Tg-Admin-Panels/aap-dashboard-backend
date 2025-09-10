@@ -28,8 +28,15 @@ const fieldSchema = new Schema(
             ],
         },
         options: {
-            // Only used for 'select' type
-            type: [String],
+            // For 'select' type:
+            // - Array of strings for a regular dropdown.
+            // - Object for a dependent dropdown, where keys are parent values
+            //   and values are arrays of strings (options).
+            type: Schema.Types.Mixed,
+        },
+        dependsOn: {
+            // For dependent dropdowns, the 'name' of the parent field.
+            type: String,
         },
         required: {
             type: Boolean,
