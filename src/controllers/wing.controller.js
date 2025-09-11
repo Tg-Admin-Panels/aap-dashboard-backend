@@ -23,7 +23,7 @@ const generateSlug = async (name) => {
 // Create new wing
 export const createWing = asyncHandler(async (req, res) => {
     console.log(req.body);
-    const { name, hero, ourLeadersSection } = req.body;
+    const { name, hero, ourLeadersSection, fbLink, instaLink, xLink } = req.body;
 
     if (!name) throw new ApiError(400, "Wing name is required");
 
@@ -32,7 +32,7 @@ export const createWing = asyncHandler(async (req, res) => {
 
     const slug = await generateSlug(name);
 
-    const wing = await Wing.create({ name, slug, hero, ourLeadersSection });
+    const wing = await Wing.create({ name, slug, hero, ourLeadersSection, fbLink, instaLink, xLink });
 
     return res
         .status(201)
@@ -221,7 +221,7 @@ export const addMember = asyncHandler(async (req, res) => {
 
 export const updateMember = asyncHandler(async (req, res) => {
     const { memberId } = req.params;
-    const { name, post, phone, image } = req.body; // Expect image directly
+    const { name, post, phone, image, fbLink, instaLink, xLink } = req.body; // Expect image directly
 
     console.log("Update member started");
     const member = await WingMember.findById(memberId);
@@ -232,6 +232,9 @@ export const updateMember = asyncHandler(async (req, res) => {
     if (name) updateFields.name = name;
     if (post) updateFields.post = post;
     if (phone) updateFields.phone = phone;
+    if (fbLink) updateFields.fbLink = fbLink;
+    if (instaLink) updateFields.instaLink = instaLink;
+    if (xLink) updateFields.xLink = xLink;
 
     console.log("Before updload");
     // Handle optional image update

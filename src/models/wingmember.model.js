@@ -16,6 +16,9 @@ const wingMemberSchema = new mongoose.Schema(
             required: true,
             unique: true,
         },
+        fbLink: { type: String },
+        instafbLink: { type: String },
+        xLink: { type: String },
         wing: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Wing",
