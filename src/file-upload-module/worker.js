@@ -24,8 +24,21 @@ const redisConnection = new IORedis({ maxRetriesPerRequest: null });
 // Redis publisher for SSE progress
 const pub = new IORedis();
 async function publishProgress(jobId, payload) {
-    await pub.publish('sse-progress', JSON.stringify({ jobId, data: payload }));
+    const message = JSON.stringify({ jobId, data: payload });
+
+    // ✅ 1. SSE pub/sub (realtime)
+    const delivered = await pub.publish('sse-progress', message);
+
+    // ✅ 2. Event history store (replay ke liye)
+    await pub.rpush(`job:${jobId}:events`, message);
+
+    // Optionally old events ko trim kar do (jaise sirf last 1000 rakhna ho)
+    // await pub.ltrim(`job:${jobId}:events`, -1000, -1);
+
+    console.log(`[SSE_PUB] Job ${jobId} -> Delivered to ${delivered} subs :: ${payload.status}`);
 }
+
+
 
 await mongoose.connect(
     "mongodb+srv://rohit:Rohit1234@cluster0.5a6t3ge.mongodb.net/aap-bihar",
@@ -95,57 +108,70 @@ async function processCsvFile(job) {
         let headersValidated = false;
         let headers = [];
 
-        Papa.parse(fileContent, {
-            header: true,
-            skipEmptyLines: true,
-            transformHeader: normalizeHeader,
-            step: async (row, parser) => {
-                if (isRowDataEmpty(row.data)) return;
+        await new Promise((resolve, reject) => {
+            Papa.parse(fileContent, {
+                header: true,
+                skipEmptyLines: true,
+                transformHeader: normalizeHeader,
+                step: async (row, parser) => {
+                    try {
+                        if (isRowDataEmpty(row.data)) return;
 
-                if (!headersValidated) {
-                    headers = Object.keys(row.data).map(normalizeHeader);
-                    const missing = definedHeaders.filter((h) => !headers.includes(h));
-                    if (missing.length) {
-                        parser.abort();
-                        throw new ApiError(400, `Missing required headers: ${missing.join(", ")}`);
+                        if (!headersValidated) {
+                            headers = Object.keys(row.data).map(normalizeHeader);
+                            const missing = definedHeaders.filter((h) => !headers.includes(h));
+                            if (missing.length) {
+                                parser.abort();
+                                return reject(new ApiError(400, `Missing required headers: ${missing.join(", ")}`));
+                            }
+                            headersValidated = true;
+                            console.log(`[WORKER] Job ${jobId}: Headers validated successfully.`);
+                            await publishProgress(jobId, {
+                                jobId, status: "validating", processedRows: 0, totalRows: null, percent: 0,
+                                message: "Headers validated successfully"
+                            });
+                        }
+
+                        const transformedRow = transformRow(row.data, definitionId, definedHeaders);
+                        csvBatch.push(transformedRow);
+                        totalRowsProcessed++;
+                        totalRows++;
+
+                        if (csvBatch.length >= CSV_BATCH_SIZE) {
+                            await insertSubmissions(csvBatch);
+                            console.log(`[WORKER] Job ${jobId}: Inserted batch of ${csvBatch.length}. Total: ${totalRowsProcessed}`);
+                            csvBatch = [];
+                            await publishProgress(jobId, {
+                                jobId, status: "inserting", processedRows: totalRowsProcessed,
+                                totalRows, percent: (totalRowsProcessed / totalRows) * 100,
+                                message: `Inserted ${totalRowsProcessed} rows`
+                            });
+                        }
+                    } catch (err) {
+                        reject(err);
                     }
-                    headersValidated = true;
-                    console.log(`[WORKER] Job ${jobId}: Headers validated successfully.`);
-                    await publishProgress(jobId, {
-                        jobId, status: "validating", processedRows: 0, totalRows: null, percent: 0,
-                        message: "Headers validated successfully"
-                    });
-                }
-
-                const transformedRow = transformRow(row.data, definitionId, definedHeaders);
-                csvBatch.push(transformedRow);
-                totalRowsProcessed++;
-                totalRows++;
-
-                if (csvBatch.length >= CSV_BATCH_SIZE) {
-                    await insertSubmissions(csvBatch);
-                    console.log(`[WORKER] Job ${jobId}: Inserted a batch of ${csvBatch.length} rows. Total processed: ${totalRowsProcessed}`);
-                    csvBatch = [];
-                    await publishProgress(jobId, {
-                        jobId, status: "inserting", processedRows: totalRowsProcessed,
-                        totalRows, percent: (totalRowsProcessed / totalRows) * 100,
-                        message: `Inserted ${totalRowsProcessed} rows`
-                    });
-                }
-            },
-            complete: async () => {
-                if (csvBatch.length > 0) await insertSubmissions(csvBatch);
-                console.log(`[WORKER] Job ${jobId}: CSV processing completed successfully. Total rows: ${totalRowsProcessed}`);
-                await publishProgress(jobId, {
-                    jobId, status: "completed", processedRows: totalRowsProcessed,
-                    totalRows, percent: 100,
-                    message: "CSV processing completed successfully"
-                });
-            },
-            error: (err) => {
-                throw new ApiError(500, `CSV parsing error: ${err.message}`);
-            }
+                },
+                complete: async () => {
+                    try {
+                        if (csvBatch.length > 0) {
+                            await insertSubmissions(csvBatch);
+                        }
+                        console.log(`[WORKER] Job ${jobId}: CSV processing completed. Total rows: ${totalRowsProcessed}`);
+                        await publishProgress(jobId, {
+                            jobId, status: "completed", processedRows: totalRowsProcessed,
+                            totalRows, percent: 100,
+                            message: "CSV processing completed successfully"
+                        });
+                        await cleanupFile(jobId, originalname);
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                },
+                error: (err) => reject(new ApiError(500, `CSV parsing error: ${err.message}`))
+            });
         });
+
     } catch (error) {
         console.error(`[WORKER] Job ${jobId}: Error processing CSV file: ${error.message}`);
         await publishProgress(jobId, {
@@ -154,8 +180,6 @@ async function processCsvFile(job) {
             message: error.message, errorReportUrl: null
         });
         throw error;
-    } finally {
-        await cleanupFile(jobId, originalname);
     }
 }
 
@@ -163,77 +187,55 @@ async function processCsvFile(job) {
 async function processXlsxFile(job) {
     const { jobId, filePath, originalname, definitionId } = job.data;
 
-    let totalRowsProcessed = 0;
-    let totalRows = 0;
-    let xlsxBatch = [];
-    let flushing = false;
+    return new Promise(async (resolve, reject) => {
+        let totalRowsProcessed = 0;
+        let totalRows = 0;
+        let xlsxBatch = [];
+        const pendingPromises = [];
 
-    async function flushBatch() {
-        if (flushing || xlsxBatch.length === 0) return;
-        flushing = true;
-        const batch = xlsxBatch;
-        xlsxBatch = [];
-        try {
-            await insertSubmissions(batch);
-            console.log(`[WORKER] Job ${jobId}: Inserted a batch of ${batch.length} rows. Total processed: ${totalRowsProcessed}`);
-            await publishProgress(jobId, {
-                jobId, status: "inserting", processedRows: totalRowsProcessed,
-                totalRows, percent: totalRows > 0 ? (totalRowsProcessed / totalRows) * 100 : 0,
-                message: `Inserted ${totalRowsProcessed} rows`
-            });
-        } finally {
-            flushing = false;
+        async function flushBatch() {
+            if (xlsxBatch.length === 0) return;
+            const batch = xlsxBatch;
+            xlsxBatch = [];
+            const p = insertSubmissions(batch)
+                .then(() => {
+                    console.log(`[WORKER] Job ${jobId}: Inserted batch of ${batch.length}. Total: ${totalRowsProcessed}`);
+                })
+                .catch(err => {
+                    console.error(`[WORKER] Job ${jobId}: Batch insert failed`, err);
+                });
+            pendingPromises.push(p);
+            await p;
         }
-    }
 
-    try {
-        console.log(`[WORKER] Job ${jobId}: Parsing XLSX file ${originalname}`);
-        await publishProgress(jobId, {
-            jobId, status: "parsing", processedRows: 0, totalRows: null, percent: 0,
-            message: "Parsing XLSX file"
-        });
+        try {
+            console.log(`[WORKER] Job ${jobId}: Parsing XLSX file ${originalname}`);
 
-        const definition = await findDefinitionById(definitionId);
-        if (!definition) throw new ApiError(404, "Definition not found.");
-        const definedHeaders = definition.fields.map((f) => normalizeHeader(f.label));
+            const definition = await findDefinitionById(definitionId);
+            if (!definition) throw new ApiError(404, "Definition not found.");
+            const definedHeaders = definition.fields.map(f => normalizeHeader(f.label));
 
-        const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader(filePath, {
-            entries: "emit", sharedStrings: "cache", hyperlinks: "emit",
-            styles: "skip", worksheets: "emit",
-        });
+            const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader(filePath, {
+                entries: "emit", sharedStrings: "cache", hyperlinks: "emit",
+                styles: "skip", worksheets: "emit"
+            });
 
-        let processedFirstSheet = false;
-        let headers = [];
-        let headersValidated = false;
+            let headers = [];
+            let headersValidated = false;
 
-        workbookReader.on("worksheet", (worksheet) => {
-            if (processedFirstSheet) return;
-            processedFirstSheet = true;
-
-            worksheet.on("row", async (row) => {
-                try {
-                    const rowData = row.values.slice(1).map(v =>
-                        v === undefined || v === null ? "" : String(v)
-                    );
+            workbookReader.on("worksheet", worksheet => {
+                worksheet.on("row", async row => {
+                    const rowData = row.values.slice(1).map(v => v ?? "");
                     if (isRowDataEmpty(rowData)) return;
 
                     if (!headersValidated) {
                         headers = rowData.map(normalizeHeader);
-                        const missing = definedHeaders.filter((h) => !headers.includes(h));
-                        if (missing.length) {
-                            throw new ApiError(400, `Missing required headers: ${missing.join(", ")}`);
-                        }
                         headersValidated = true;
-                        console.log(`[WORKER] Job ${jobId}: Headers validated successfully.`);
-                        await publishProgress(jobId, {
-                            jobId, status: "validating", processedRows: 0, totalRows: null, percent: 0,
-                            message: "Headers validated successfully"
-                        });
                         return;
                     }
 
                     const rowObject = {};
-                    headers.forEach((h, i) => { rowObject[h] = rowData[i]; });
+                    headers.forEach((h, i) => rowObject[h] = rowData[i]);
 
                     const transformedRow = transformRow(rowObject, definitionId, definedHeaders);
                     xlsxBatch.push(transformedRow);
@@ -243,48 +245,53 @@ async function processXlsxFile(job) {
                     if (xlsxBatch.length >= XLSX_BATCH_SIZE) {
                         await flushBatch();
                     }
+                });
+
+                worksheet.on("finished", async () => {
+                    if (xlsxBatch.length > 0) {
+                        await flushBatch();
+                    }
+                });
+            });
+
+            workbookReader.on("end", async () => {
+                try {
+                    await Promise.all(pendingPromises);
+
+                    console.log(`[WORKER] Job ${jobId}: XLSX processing completed. Total rows: ${totalRowsProcessed}`);
+
+                    await publishProgress(jobId, {
+                        jobId,
+                        status: "completed",
+                        processedRows: totalRowsProcessed,
+                        totalRows,
+                        percent: 100,
+                        message: "XLSX processing completed successfully"
+                    });
+
+                    await cleanupFile(jobId, originalname);
+
+                    // 👇 छोटा delay do before resolve
+                    setTimeout(() => resolve(), 50);
+
                 } catch (err) {
-                    console.error(`Error processing XLSX row:`, err);
+                    reject(err);
                 }
             });
 
-            worksheet.on("finished", async () => {
-                await flushBatch();
-                console.log(`[WORKER] Job ${jobId}: XLSX processing completed successfully. Total rows: ${totalRowsProcessed}`);
-                await publishProgress(jobId, {
-                    jobId, status: "completed", processedRows: totalRowsProcessed,
-                    totalRows, percent: 100,
-                    message: "XLSX processing completed successfully"
-                });
+
+            workbookReader.on("error", err => {
+                reject(err);
             });
-        });
 
-        workbookReader.on("error", async (err) => {
-            await publishProgress(jobId, {
-                jobId, status: "failed", processedRows: totalRowsProcessed,
-                totalRows, percent: 0,
-                message: err.message, errorReportUrl: null
-            });
-        });
-
-        await new Promise((resolve, reject) => {
-            workbookReader.on("end", resolve);
-            workbookReader.on("error", reject);
-            workbookReader.read();
-        });
-
-    } catch (error) {
-        console.error(`[WORKER] Job ${jobId}: Error processing XLSX file: ${error.message}`);
-        await publishProgress(jobId, {
-            jobId, status: "failed", processedRows: totalRowsProcessed,
-            totalRows, percent: 0,
-            message: error.message, errorReportUrl: null
-        });
-        throw error;
-    } finally {
-        await cleanupFile(jobId, originalname);
-    }
+            await workbookReader.read();
+        } catch (err) {
+            reject(err);
+        }
+    });
 }
+
+
 
 // ---------------- Worker ----------------
 const fileUploadWorker = new Worker(
