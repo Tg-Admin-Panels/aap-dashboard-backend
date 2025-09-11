@@ -6,6 +6,7 @@ import multer from "multer";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 import { v4 as uuidv4 } from 'uuid'; // Add this import
+// import './file-upload-module/worker.js'
 const app = express();
 
 console.log("This is AAP Bihar Backend");

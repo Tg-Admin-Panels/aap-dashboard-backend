@@ -1,18 +1,13 @@
-
-// Removed writeChunk as multer handles file saving
-// import { writeChunk } from '../utils/tempFileStorage.js';
-
+// upload.controller.js
 import ApiError from "../../utils/ApiError.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import fileUploadQueue from '../queue.js';
-// Removed writeChunk as multer handles file saving
-// import { writeChunk } from '../utils/tempFileStorage.js';
+import { sendSseProgress } from "../utils/sseProgress.js";
 
 export function createUploadChunkHandler() {
     return asyncHandler(async (req, res) => {
         const { definitionId } = req.params;
-        // Multer places the file information in req.file
         const file = req.file;
 
         if (!file) {
@@ -26,7 +21,7 @@ export function createUploadChunkHandler() {
             throw new ApiError(400, "Unsupported file type. Only CSV and XLSX are supported.");
         }
 
-        const jobId = req.jobId; // Use jobId from middleware
+        const jobId = req.jobId;
 
         await fileUploadQueue.add('processFile', {
             jobId,
@@ -34,6 +29,16 @@ export function createUploadChunkHandler() {
             originalname,
             definitionId,
             fileType: lower.endsWith(".csv") ? "csv" : "xlsx",
+        });
+
+        // 🔹 Send initial SSE status: queued
+        sendSseProgress(definitionId, {
+            jobId,
+            status: "queued",
+            processedRows: 0,
+            totalRows: null,
+            percent: 0,
+            message: "File queued for processing"
         });
 
         return res.status(200).json(new ApiResponse(200, { jobId }, "File upload complete. Processing started."));

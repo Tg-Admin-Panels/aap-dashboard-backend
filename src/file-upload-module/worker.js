@@ -73,8 +73,14 @@ async function processCsvFile(job) {
 
     let totalRowsProcessed = 0;
     let csvBatch = [];
+    let totalRows = 0;
 
     try {
+        sendSseProgress(definitionId, {
+            jobId, status: "parsing", processedRows: 0, totalRows: null, percent: 0,
+            message: "Parsing CSV file"
+        });
+
         const fileContent = await fs.readFile(filePath, 'utf8');
         const definition = await findDefinitionById(definitionId);
         if (!definition) throw new ApiError(404, "Definition not found.");
@@ -98,24 +104,33 @@ async function processCsvFile(job) {
                         throw new ApiError(400, `Missing required headers: ${missing.join(", ")}`);
                     }
                     headersValidated = true;
+                    sendSseProgress(definitionId, {
+                        jobId, status: "validating", processedRows: 0, totalRows: null, percent: 0,
+                        message: "Headers validated successfully"
+                    });
                 }
 
                 const transformedRow = transformRow(row.data, definitionId, definedHeaders);
                 csvBatch.push(transformedRow);
                 totalRowsProcessed++;
+                totalRows++;
 
                 if (csvBatch.length >= CSV_BATCH_SIZE) {
                     await insertSubmissions(csvBatch);
                     csvBatch = [];
                     sendSseProgress(definitionId, {
-                        jobId, status: "processing", processedRows: totalRowsProcessed, originalname
+                        jobId, status: "inserting", processedRows: totalRowsProcessed,
+                        totalRows, percent: (totalRowsProcessed / totalRows) * 100,
+                        message: `Inserted ${totalRowsProcessed} rows`
                     });
                 }
             },
             complete: async () => {
                 if (csvBatch.length > 0) await insertSubmissions(csvBatch);
                 sendSseProgress(definitionId, {
-                    jobId, status: "completed", processedRows: totalRowsProcessed, originalname
+                    jobId, status: "completed", processedRows: totalRowsProcessed,
+                    totalRows, percent: 100,
+                    message: "CSV processing completed successfully"
                 });
             },
             error: (err) => {
@@ -124,7 +139,9 @@ async function processCsvFile(job) {
         });
     } catch (error) {
         sendSseProgress(definitionId, {
-            jobId, status: "failed", error: error.message, originalname
+            jobId, status: "failed", processedRows: totalRowsProcessed,
+            totalRows, percent: 0,
+            message: error.message, errorReportUrl: null
         });
         throw error;
     } finally {
@@ -137,6 +154,7 @@ async function processXlsxFile(job) {
     const { jobId, filePath, originalname, definitionId } = job.data;
 
     let totalRowsProcessed = 0;
+    let totalRows = 0;
     let xlsxBatch = [];
     let flushing = false;
 
@@ -148,7 +166,9 @@ async function processXlsxFile(job) {
         try {
             await insertSubmissions(batch);
             sendSseProgress(definitionId, {
-                jobId, status: "processing", processedRows: totalRowsProcessed, originalname
+                jobId, status: "inserting", processedRows: totalRowsProcessed,
+                totalRows, percent: totalRows > 0 ? (totalRowsProcessed / totalRows) * 100 : 0,
+                message: `Inserted ${totalRowsProcessed} rows`
             });
         } finally {
             flushing = false;
@@ -156,6 +176,11 @@ async function processXlsxFile(job) {
     }
 
     try {
+        sendSseProgress(definitionId, {
+            jobId, status: "parsing", processedRows: 0, totalRows: null, percent: 0,
+            message: "Parsing XLSX file"
+        });
+
         const definition = await findDefinitionById(definitionId);
         if (!definition) throw new ApiError(404, "Definition not found.");
         const definedHeaders = definition.fields.map((f) => normalizeHeader(f.label));
@@ -187,7 +212,11 @@ async function processXlsxFile(job) {
                             throw new ApiError(400, `Missing required headers: ${missing.join(", ")}`);
                         }
                         headersValidated = true;
-                        return; // skip header row
+                        sendSseProgress(definitionId, {
+                            jobId, status: "validating", processedRows: 0, totalRows: null, percent: 0,
+                            message: "Headers validated successfully"
+                        });
+                        return;
                     }
 
                     const rowObject = {};
@@ -196,6 +225,7 @@ async function processXlsxFile(job) {
                     const transformedRow = transformRow(rowObject, definitionId, definedHeaders);
                     xlsxBatch.push(transformedRow);
                     totalRowsProcessed++;
+                    totalRows++;
 
                     if (xlsxBatch.length >= XLSX_BATCH_SIZE) {
                         await flushBatch();
@@ -208,15 +238,18 @@ async function processXlsxFile(job) {
             worksheet.on("finished", async () => {
                 await flushBatch();
                 sendSseProgress(definitionId, {
-                    jobId, status: "completed", processedRows: totalRowsProcessed, originalname
+                    jobId, status: "completed", processedRows: totalRowsProcessed,
+                    totalRows, percent: 100,
+                    message: "XLSX processing completed successfully"
                 });
-                console.log(`XLSX job ${jobId} completed. Rows: ${totalRowsProcessed}`);
             });
         });
 
         workbookReader.on("error", (err) => {
             sendSseProgress(definitionId, {
-                jobId, status: "failed", error: err.message, originalname
+                jobId, status: "failed", processedRows: totalRowsProcessed,
+                totalRows, percent: 0,
+                message: err.message, errorReportUrl: null
             });
         });
 
@@ -228,7 +261,9 @@ async function processXlsxFile(job) {
 
     } catch (error) {
         sendSseProgress(definitionId, {
-            jobId, status: "failed", error: error.message, originalname
+            jobId, status: "failed", processedRows: totalRowsProcessed,
+            totalRows, percent: 0,
+            message: error.message, errorReportUrl: null
         });
         throw error;
     } finally {
