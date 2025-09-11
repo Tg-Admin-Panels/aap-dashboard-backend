@@ -1,9 +1,15 @@
-// upload.controller.js
 import ApiError from "../../utils/ApiError.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import fileUploadQueue from '../queue.js';
-import { sendSseProgress } from "../utils/sseProgress.js";
+import IORedis from 'ioredis';
+
+// Redis publisher for progress events
+const pub = new IORedis();
+
+async function publishProgress(jobId, payload) {
+    await pub.publish('sse-progress', JSON.stringify({ jobId, data: payload }));
+}
 
 export function createUploadChunkHandler() {
     return asyncHandler(async (req, res) => {
@@ -23,6 +29,8 @@ export function createUploadChunkHandler() {
 
         const jobId = req.jobId;
 
+        console.log(`[UPLOAD_CONTROLLER] Received file: ${originalname}, Job ID: ${jobId}`);
+
         await fileUploadQueue.add('processFile', {
             jobId,
             filePath,
@@ -31,8 +39,10 @@ export function createUploadChunkHandler() {
             fileType: lower.endsWith(".csv") ? "csv" : "xlsx",
         });
 
-        // 🔹 Send initial SSE status: queued
-        sendSseProgress(definitionId, {
+        console.log(`[UPLOAD_CONTROLLER] Job ${jobId} added to the queue.`);
+
+        // 🔹 Immediately notify client that job is queued
+        await publishProgress(jobId, {
             jobId,
             status: "queued",
             processedRows: 0,
@@ -41,7 +51,9 @@ export function createUploadChunkHandler() {
             message: "File queued for processing"
         });
 
-        return res.status(200).json(new ApiResponse(200, { jobId }, "File upload complete. Processing started."));
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { jobId }, "File upload complete. Processing started."));
     });
 }
 

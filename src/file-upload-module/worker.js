@@ -5,7 +5,6 @@ import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import mongoose from 'mongoose';
 import { cleanupFile } from './utils/tempFileStorage.js';
-import { sendSseProgress } from './utils/sseProgress.js';
 import fileUploadQueue from './queue.js';
 
 import {
@@ -21,6 +20,12 @@ import { FormSubmission } from '../models/formSubmission.model.js';
 
 // ---------------- DB + Redis ----------------
 const redisConnection = new IORedis({ maxRetriesPerRequest: null });
+
+// Redis publisher for SSE progress
+const pub = new IORedis();
+async function publishProgress(jobId, payload) {
+    await pub.publish('sse-progress', JSON.stringify({ jobId, data: payload }));
+}
 
 await mongoose.connect(
     "mongodb+srv://rohit:Rohit1234@cluster0.5a6t3ge.mongodb.net/aap-bihar",
@@ -76,7 +81,8 @@ async function processCsvFile(job) {
     let totalRows = 0;
 
     try {
-        sendSseProgress(definitionId, {
+        console.log(`[WORKER] Job ${jobId}: Parsing CSV file ${originalname}`);
+        await publishProgress(jobId, {
             jobId, status: "parsing", processedRows: 0, totalRows: null, percent: 0,
             message: "Parsing CSV file"
         });
@@ -104,7 +110,8 @@ async function processCsvFile(job) {
                         throw new ApiError(400, `Missing required headers: ${missing.join(", ")}`);
                     }
                     headersValidated = true;
-                    sendSseProgress(definitionId, {
+                    console.log(`[WORKER] Job ${jobId}: Headers validated successfully.`);
+                    await publishProgress(jobId, {
                         jobId, status: "validating", processedRows: 0, totalRows: null, percent: 0,
                         message: "Headers validated successfully"
                     });
@@ -117,8 +124,9 @@ async function processCsvFile(job) {
 
                 if (csvBatch.length >= CSV_BATCH_SIZE) {
                     await insertSubmissions(csvBatch);
+                    console.log(`[WORKER] Job ${jobId}: Inserted a batch of ${csvBatch.length} rows. Total processed: ${totalRowsProcessed}`);
                     csvBatch = [];
-                    sendSseProgress(definitionId, {
+                    await publishProgress(jobId, {
                         jobId, status: "inserting", processedRows: totalRowsProcessed,
                         totalRows, percent: (totalRowsProcessed / totalRows) * 100,
                         message: `Inserted ${totalRowsProcessed} rows`
@@ -127,7 +135,8 @@ async function processCsvFile(job) {
             },
             complete: async () => {
                 if (csvBatch.length > 0) await insertSubmissions(csvBatch);
-                sendSseProgress(definitionId, {
+                console.log(`[WORKER] Job ${jobId}: CSV processing completed successfully. Total rows: ${totalRowsProcessed}`);
+                await publishProgress(jobId, {
                     jobId, status: "completed", processedRows: totalRowsProcessed,
                     totalRows, percent: 100,
                     message: "CSV processing completed successfully"
@@ -138,7 +147,8 @@ async function processCsvFile(job) {
             }
         });
     } catch (error) {
-        sendSseProgress(definitionId, {
+        console.error(`[WORKER] Job ${jobId}: Error processing CSV file: ${error.message}`);
+        await publishProgress(jobId, {
             jobId, status: "failed", processedRows: totalRowsProcessed,
             totalRows, percent: 0,
             message: error.message, errorReportUrl: null
@@ -165,7 +175,8 @@ async function processXlsxFile(job) {
         xlsxBatch = [];
         try {
             await insertSubmissions(batch);
-            sendSseProgress(definitionId, {
+            console.log(`[WORKER] Job ${jobId}: Inserted a batch of ${batch.length} rows. Total processed: ${totalRowsProcessed}`);
+            await publishProgress(jobId, {
                 jobId, status: "inserting", processedRows: totalRowsProcessed,
                 totalRows, percent: totalRows > 0 ? (totalRowsProcessed / totalRows) * 100 : 0,
                 message: `Inserted ${totalRowsProcessed} rows`
@@ -176,7 +187,8 @@ async function processXlsxFile(job) {
     }
 
     try {
-        sendSseProgress(definitionId, {
+        console.log(`[WORKER] Job ${jobId}: Parsing XLSX file ${originalname}`);
+        await publishProgress(jobId, {
             jobId, status: "parsing", processedRows: 0, totalRows: null, percent: 0,
             message: "Parsing XLSX file"
         });
@@ -212,7 +224,8 @@ async function processXlsxFile(job) {
                             throw new ApiError(400, `Missing required headers: ${missing.join(", ")}`);
                         }
                         headersValidated = true;
-                        sendSseProgress(definitionId, {
+                        console.log(`[WORKER] Job ${jobId}: Headers validated successfully.`);
+                        await publishProgress(jobId, {
                             jobId, status: "validating", processedRows: 0, totalRows: null, percent: 0,
                             message: "Headers validated successfully"
                         });
@@ -237,7 +250,8 @@ async function processXlsxFile(job) {
 
             worksheet.on("finished", async () => {
                 await flushBatch();
-                sendSseProgress(definitionId, {
+                console.log(`[WORKER] Job ${jobId}: XLSX processing completed successfully. Total rows: ${totalRowsProcessed}`);
+                await publishProgress(jobId, {
                     jobId, status: "completed", processedRows: totalRowsProcessed,
                     totalRows, percent: 100,
                     message: "XLSX processing completed successfully"
@@ -245,8 +259,8 @@ async function processXlsxFile(job) {
             });
         });
 
-        workbookReader.on("error", (err) => {
-            sendSseProgress(definitionId, {
+        workbookReader.on("error", async (err) => {
+            await publishProgress(jobId, {
                 jobId, status: "failed", processedRows: totalRowsProcessed,
                 totalRows, percent: 0,
                 message: err.message, errorReportUrl: null
@@ -260,7 +274,8 @@ async function processXlsxFile(job) {
         });
 
     } catch (error) {
-        sendSseProgress(definitionId, {
+        console.error(`[WORKER] Job ${jobId}: Error processing XLSX file: ${error.message}`);
+        await publishProgress(jobId, {
             jobId, status: "failed", processedRows: totalRowsProcessed,
             totalRows, percent: 0,
             message: error.message, errorReportUrl: null

@@ -1,24 +1,46 @@
+import IORedis from 'ioredis';
+
 const sseConnections = new Map();
 
-export function sendSseProgress(id, data) {
-    const res = sseConnections.get(id);
-    console.log(`[SSE_PROGRESS] Attempting to send SSE for ID: ${id}, Data: ${JSON.stringify(data)}`);
-    if (res) {
-        console.log(`[SSE_PROGRESS] SSE connection found for ID: ${id}. Writing data.`);
-        res.write(`data: ${JSON.stringify(data)}
+// Redis subscriber
+const sub = new IORedis();
 
-`);
-    } else {
-        console.log(`[SSE_PROGRESS] No SSE connection found for ID: ${id}. This means the client might have disconnected or the ID is incorrect.`);
+sub.on('error', (err) => {
+    console.error('[SSE_PROGRESS] Redis subscriber error:', err);
+});
+
+// Subscribe to channel
+await sub.subscribe('sse-progress');
+
+sub.on('message', (channel, message) => {
+    try {
+        const parsed = JSON.parse(message);
+        if (!parsed || !parsed.jobId || !parsed.data) {
+            console.error("[SSE_PROGRESS] Invalid pubsub payload:", message);
+            return;
+        }
+
+        const { jobId, data } = parsed;
+        console.log(`[SSE_PROGRESS] Received event for Job: ${jobId}`, data);
+
+        const res = sseConnections.get(jobId);
+        if (res) {
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        } else {
+            console.log(`[SSE_PROGRESS] No active SSE connection for Job: ${jobId}`);
+        }
+    } catch (err) {
+        console.error("[SSE_PROGRESS] Failed to handle pubsub message:", err, "Raw:", message);
     }
+});
+
+// ---------------- SSE Connection Management ----------------
+export function addSseConnection(jobId, res) {
+    sseConnections.set(jobId, res);
+    console.log(`[SSE_PROGRESS] Added SSE connection for Job: ${jobId}. Total: ${sseConnections.size}`);
 }
 
-export function addSseConnection(id, res) {
-    sseConnections.set(id, res);
-    console.log(`[SSE_PROGRESS] Added SSE connection for ID: ${id}. Total connections: ${sseConnections.size}`);
-}
-
-export function removeSseConnection(id) {
-    sseConnections.delete(id);
-    console.log(`[SSE_PROGRESS] Removed SSE connection for ID: ${id}. Total connections: ${sseConnections.size}`);
+export function removeSseConnection(jobId) {
+    sseConnections.delete(jobId);
+    console.log(`[SSE_PROGRESS] Removed SSE connection for Job: ${jobId}. Total: ${sseConnections.size}`);
 }
