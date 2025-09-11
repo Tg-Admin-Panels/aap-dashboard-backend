@@ -198,8 +198,18 @@ async function processXlsxFile(job) {
             const batch = xlsxBatch;
             xlsxBatch = [];
             const p = insertSubmissions(batch)
-                .then(() => {
+                .then(async () => {
                     console.log(`[WORKER] Job ${jobId}: Inserted batch of ${batch.length}. Total: ${totalRowsProcessed}`);
+                    const payload = {
+                        jobId,
+                        status: "inserting",
+                        processedRows: totalRowsProcessed,
+                        totalRows,
+                        percent: (totalRowsProcessed / totalRows) * 100,
+                        message: `Please wait,Inserting.. ${totalRowsProcessed} rows`
+                    };
+                    console.log('[WORKER] Publishing progress:', payload);
+                    await publishProgress(jobId, payload);
                 })
                 .catch(err => {
                     console.error(`[WORKER] Job ${jobId}: Batch insert failed`, err);
