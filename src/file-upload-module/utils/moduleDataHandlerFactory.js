@@ -46,7 +46,7 @@ export const createMongooseDataHandler = () => {
             console.log("[DATA_HANDLER] First submission example:", JSON.stringify(submissions[0], null, 2));
 
             try {
-                console.log(`befor insering review the array: ${submissions}`)
+
                 const result = await FormSubmission.insertMany(submissions, { ordered: false });
                 console.log(`[DATA_HANDLER] Mongoose insertMany successful. Inserted count: ${result.length}`);
             } catch (error) {
@@ -66,7 +66,7 @@ export const createMongooseDataHandler = () => {
             definedHeaders.forEach((h) => {
                 data[toCamelCase(h)] = row[h] !== undefined ? row[h] : "N/A";
             });
-            return { definitionId, data };
+            return { formId: definitionId, data };
         },
     };
 };

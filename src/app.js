@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import multer from "multer";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
+import { v4 as uuidv4 } from 'uuid'; // Add this import
 const app = express();
 
 console.log("This is AAP Bihar Backend");
@@ -55,13 +56,23 @@ app.use(
     })
 );
 
+// Middleware to generate jobId for upload
+app.use((req, res, next) => {
+    // Apply only to the specific upload route
+    if (req.url.includes('/api/v1/uploads') && req.method === 'POST') {
+        req.jobId = uuidv4();
+    }
+    next();
+});
+
 // Define storage for multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.join(process.cwd(), 'tmp', 'uploads'));
     },
     filename: (req, file, cb) => {
-        cb(null, file.originalname);
+        const fileExtension = path.extname(file.originalname);
+        cb(null, `${req.jobId}${fileExtension}`); // Use req.jobId
     }
 });
 

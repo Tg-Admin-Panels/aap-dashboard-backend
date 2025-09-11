@@ -1,13 +1,15 @@
 
+// Removed writeChunk as multer handles file saving
+// import { writeChunk } from '../utils/tempFileStorage.js';
+
 import ApiError from "../../utils/ApiError.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import ApiResponse from "../../utils/ApiResponse.js";
-import { v4 as uuidv4 } from 'uuid';
 import fileUploadQueue from '../queue.js';
 // Removed writeChunk as multer handles file saving
 // import { writeChunk } from '../utils/tempFileStorage.js';
 
-export function createUploadChunkHandler(dataHandler) {
+export function createUploadChunkHandler() {
     return asyncHandler(async (req, res) => {
         const { definitionId } = req.params;
         // Multer places the file information in req.file
@@ -24,7 +26,7 @@ export function createUploadChunkHandler(dataHandler) {
             throw new ApiError(400, "Unsupported file type. Only CSV and XLSX are supported.");
         }
 
-        const jobId = uuidv4(); // Generate a unique jobId for the entire upload session
+        const jobId = req.jobId; // Use jobId from middleware
 
         await fileUploadQueue.add('processFile', {
             jobId,
