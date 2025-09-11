@@ -12,12 +12,12 @@ import {
     CSV_BATCH_SIZE,
     XLSX_BATCH_SIZE,
     normalizeHeader,
+    toCamelCase,
 } from './utils/uploadHelpers.js';
 import ApiError from '../utils/ApiError.js';
 
 import { FormDefinition } from '../models/formDefinition.model.js';
 import { FormSubmission } from '../models/formSubmission.model.js';
-import { createMongooseDataHandler } from './utils/moduleDataHandlerFactory.js';
 
 // Helper function to check if an object's values are all empty
 function isRowDataEmpty(rowData) {
@@ -41,12 +41,50 @@ if (mongoose.connection.readyState !== 1) {
 }
 
 // worker.js (top)
-let myDataHandler; // same name so the rest of your code keeps working
 
 mongoose.set('bufferCommands', false); // fail-fast instead of 10s buffering
 
-// After successful connect, create the handler using models
-myDataHandler = createMongooseDataHandler(FormDefinition, FormSubmission);
+// Data Handler Functions (formerly in moduleDataHandlerFactory.js or dataHandler.js)
+const findDefinitionById = async (definitionId) => {
+    console.log(`Got form definition id: `, definitionId);
+    return FormDefinition.findById(definitionId);
+};
+
+const insertSubmissions = async (submissions) => {
+    if (submissions.length === 0) {
+        console.log("[DATA_HANDLER] No submissions to insert, returning.");
+        return 0;
+    }
+    console.log(`[DATA_HANDLER] Received ${submissions.length} submissions for insertion.`);
+    console.log("[DATA_HANDLER] First submission example:", JSON.stringify(submissions[0], null, 2));
+
+    try {
+        console.log(`[DATA_HANDLER] Submissions array before insertMany:`, JSON.stringify(submissions, null, 2));
+        const result = await FormSubmission.insertMany(submissions, { ordered: false });
+        console.log(`[DATA_HANDLER] Mongoose insertMany successful. Inserted count: ${result.length}`);
+        return result.length;
+    } catch (error) {
+        console.error("[DATA_HANDLER] Mongoose insertMany failed:", error);
+        if (error.writeErrors) {
+            error.writeErrors.forEach((err, index) => {
+                console.error(`[DATA_HANDLER] Write Error ${index + 1}:`, err.errmsg);
+                console.error(`[DATA_HANDLER] Failed document for Write Error ${index + 1}:`, JSON.stringify(submissions[err.index], null, 2));
+            });
+        }
+        throw error;
+    }
+};
+
+const transformRow = (row, definitionId, definedHeaders) => {
+    const data = {};
+    definedHeaders.forEach((h) => {
+        data[toCamelCase(h)] = row[h] !== undefined ? row[h] : "N/A";
+    });
+    console.log(`transform data: ${data}`)
+    const transformed = { formId: definitionId, data };
+    console.log("[DEBUG] Transformed Row:", JSON.stringify(transformed, null, 2)); // Added debug log
+    return transformed;
+};
 
 
 // Function to process CSV files
@@ -60,7 +98,7 @@ async function processCsvFile(job) {
     try {
         const fileContent = await fs.readFile(filePath, 'utf8');
 
-        const definition = await myDataHandler.findDefinitionById(definitionId);
+        const definition = await findDefinitionById(definitionId); // Changed from myDataHandler.findDefinitionById
         if (!definition) {
             throw new ApiError(404, "Definition not found.");
         }
@@ -89,7 +127,7 @@ async function processCsvFile(job) {
                     headersValidated = true;
                 }
 
-                const transformedRow = myDataHandler.transformRow(
+                const transformedRow = transformRow( // Changed from myDataHandler.transformRow
                     row.data,
                     definitionId,
                     definedHeaders
@@ -99,7 +137,7 @@ async function processCsvFile(job) {
                 if (csvBatch.length >= CSV_BATCH_SIZE) {
                     console.log(`[WORKER] Attempting to insert ${csvBatch.length} documents.`);
                     try {
-                        const ins = await myDataHandler.insertSubmissions(csvBatch);
+                        const ins = await insertSubmissions(csvBatch); // Changed from myDataHandler.insertSubmissions
                         console.log(`[WORKER] Successfully inserted ${csvBatch.length} documents.`);
                         totalRowsProcessed += ins;
                         csvBatch = [];
@@ -119,7 +157,7 @@ async function processCsvFile(job) {
                 if (csvBatch.length > 0) {
                     console.log(`[WORKER] Attempting to insert final batch of ${csvBatch.length} documents.`);
                     try {
-                        const ins = await myDataHandler.insertSubmissions(csvBatch);
+                        const ins = await insertSubmissions(csvBatch); // Changed from myDataHandler.insertSubmissions
                         console.log(`[WORKER] Successfully inserted final batch of ${csvBatch.length} documents.`);
                         totalRowsProcessed += ins;
                     } catch (insertErr) {
@@ -164,7 +202,7 @@ async function processXlsxFile(job) {
 
     try {
         console.log("definitionId: ", definitionId)
-        const definition = await myDataHandler.findDefinitionById(definitionId);
+        const definition = await findDefinitionById(definitionId); // Changed from myDataHandler.findDefinitionById
         if (!definition) {
             throw new ApiError(404, "Definition not found.");
         }
@@ -221,7 +259,7 @@ async function processXlsxFile(job) {
                         rowObject[h] = rowData[i];
                     });
 
-                    const transformedRow = myDataHandler.transformRow(
+                    const transformedRow = transformRow( // Changed from myDataHandler.transformRow
                         rowObject,
                         definitionId,
                         definedHeaders
@@ -231,7 +269,7 @@ async function processXlsxFile(job) {
                     if (xlsxBatch.length >= XLSX_BATCH_SIZE) {
                         console.log(`[WORKER] Attempting to insert ${xlsxBatch.length} documents.`);
                         try {
-                            const ins = await myDataHandler.insertSubmissions(xlsxBatch);
+                            const ins = await insertSubmissions(xlsxBatch); // Changed from myDataHandler.insertSubmissions
                             console.log(`[WORKER] Successfully inserted ${xlsxBatch.length} documents.`);
                             totalRowsProcessed += ins;
                             xlsxBatch = [];
@@ -262,7 +300,7 @@ async function processXlsxFile(job) {
                 if (xlsxBatch.length > 0) {
                     console.log(`[WORKER] Attempting to insert final batch of ${xlsxBatch.length} documents.`);
                     try {
-                        const ins = await myDataHandler.insertSubmissions(xlsxBatch);
+                        const ins = await insertSubmissions(xlsxBatch); // Changed from myDataHandler.insertSubmissions
                         console.log(`[WORKER] Successfully inserted final batch of ${xlsxBatch.length} documents.`);
                         totalRowsProcessed += ins;
                     } catch (insertErr) {
@@ -328,3 +366,4 @@ const fileUploadWorker = new Worker('file-upload', async (job) => {
 });
 
 console.log('Worker started...');
+console.log('fileUploadWorker is active and listening for jobs.');

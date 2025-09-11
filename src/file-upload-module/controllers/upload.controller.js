@@ -7,7 +7,7 @@ import fileUploadQueue from '../queue.js';
 // Removed writeChunk as multer handles file saving
 // import { writeChunk } from '../utils/tempFileStorage.js';
 
-export function createUploadChunkHandler(dataHandler) {
+export function createUploadChunkHandler() {
     return asyncHandler(async (req, res) => {
         const { definitionId } = req.params;
         // Multer places the file information in req.file

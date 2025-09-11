@@ -105,7 +105,6 @@ import campaignRouter from "./routes/campaign.routes.js";
 import formRouter from "./routes/form.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import setupUploadModule from "./file-upload-module/index.js";
-import { myDataHandler } from "./utils/dataHandler.js";
 
 app.get("/", (req, res) => {
     res.send("Welcome to AAP Bihar");
@@ -126,7 +125,7 @@ app.use("/api/cloudinary", cloudinaryRouter);
 app.use("/candidate-applications", candidateApplicationRouter);
 app.use("/campaigns", campaignRouter);
 app.use("/api/v1/forms", formRouter);
-setupUploadModule(app, myDataHandler)
+setupUploadModule(app)
 app.use(errorMiddleware);
 
 export default app;
