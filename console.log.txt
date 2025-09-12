@@ -1,0 +1,13 @@
+[
+  { 'name': 'बिहार', code: 'BRI' },
+  { 'name': 'झारखंड', code: 'JHP' },
+  { 'name': 'उत्तर प्रदेश', code: 'UPT' },
+  { 'name': 'Madhya Pradesh', code: 'MPP' }
+]
+[ 'name', 'code' ]
+[
+  { name: undefined, code: 'BRI' },
+  { name: undefined, code: 'JHP' },
+  { name: undefined, code: 'UPT' },
+  { name: undefined, code: 'MPP' }
+]

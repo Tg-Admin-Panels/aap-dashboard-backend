@@ -2,11 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import bodyParser from "body-parser";
-import multer from "multer";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
-import { v4 as uuidv4 } from 'uuid'; // Add this import
 // import './file-upload-module/worker.js'
 const app = express();
 dotenv.config();
@@ -58,33 +55,6 @@ app.use(
         credentials: true,
     })
 );
-
-// Middleware to generate jobId for upload
-app.use((req, res, next) => {
-    // Apply only to the specific upload route
-    if (req.url.includes('/api/v1/uploads') && req.method === 'POST') {
-        req.jobId = uuidv4();
-    }
-    next();
-});
-
-// Define storage for multer
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(process.cwd(), 'tmp', 'uploads'));
-    },
-    filename: (req, file, cb) => {
-        const fileExtension = path.extname(file.originalname);
-        cb(null, `${req.jobId}${fileExtension}`); // Use req.jobId
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // 50 MB
-});
-
-export const uploadMiddleware = upload;
 
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());

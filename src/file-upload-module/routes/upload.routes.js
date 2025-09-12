@@ -1,6 +1,6 @@
 import express from 'express';
 import { createUploadChunkHandler, handleSseConnection, uploadComplete } from '../controllers/upload.controller.js';
-import { uploadMiddleware } from '../../app.js'; // Import uploadMiddleware
+import { uploadMiddleware } from '../../middlewares/multer.middleware.js'; // Import uploadMiddleware
 
 export default function createUploadRouter(dataHandler) {
     const router = express.Router();
