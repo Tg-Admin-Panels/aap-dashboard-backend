@@ -1,4 +1,5 @@
 import express from "express";
+import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
@@ -8,6 +9,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { v4 as uuidv4 } from 'uuid'; // Add this import
 // import './file-upload-module/worker.js'
 const app = express();
+dotenv.config();
 
 console.log("This is AAP Bihar Backend");
 app.use((req, res, next) => {
