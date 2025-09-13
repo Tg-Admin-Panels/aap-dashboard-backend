@@ -4,7 +4,7 @@ import app from "./src/app.js";
 
 dotenv.config();
 
-const port = process.env.PORT || 8000;
+const port = (process.env.NODE_ENV === 'production' ? process.env.PROD_PORT : process.env.DEV_PORT) || 8000;
 
 connectDB()
     .then(() => {
