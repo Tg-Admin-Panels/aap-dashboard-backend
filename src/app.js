@@ -45,6 +45,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(
     cors({
         origin: [
+            "http://test-admin.aapbihar.org",
             "http://localhost:5173",
             "http://localhost:5500",
             "http://127.0.0.1:5501",

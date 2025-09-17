@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 // @route   POST /api/v1/forms
 // @access  Private
 const createFormDefinition = asyncHandler(async (req, res) => {
-    const { formName, fields } = req.body;
+    const { formName, fields, locationDD } = req.body;
 
     if (!formName || !fields || !Array.isArray(fields) || fields.length === 0) {
         throw new ApiError(
@@ -36,7 +36,7 @@ const createFormDefinition = asyncHandler(async (req, res) => {
         );
     }
 
-    const form = await FormDefinition.create({ formName, fields });
+    const form = await FormDefinition.create({ formName, fields, locationDD });
 
     return res
         .status(201)

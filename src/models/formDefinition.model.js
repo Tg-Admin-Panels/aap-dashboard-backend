@@ -58,6 +58,10 @@ const formDefinitionSchema = new Schema(
             type: [fieldSchema],
             required: true,
         },
+        locationDD: {
+            type: Object,
+            default: { state: false, district: false, legislativeAssembly: false, booth: false },
+        },
     },
     { timestamps: true }
 );
