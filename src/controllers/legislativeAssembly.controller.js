@@ -15,10 +15,25 @@ export const createLegislativeAssembly = async (req, res) => {
 
 export const getAllLegislativeAssemblies = async (req, res) => {
     try {
-        const { parentId } = req.query;
+        const { parentId, limit = 100, page = 1 } = req.query;
         const query = parentId ? { parentId } : {};
-        const legislativeAssemblies = await LegislativeAssembly.find(query);
-        res.status(200).json({ success: true, data: legislativeAssemblies });
+        const limitInt = parseInt(limit);
+        const pageInt = parseInt(page);
+        const skip = (pageInt - 1) * limitInt;
+
+        const legislativeAssemblies = await LegislativeAssembly.find(query).limit(limitInt).skip(skip);
+        const total = await LegislativeAssembly.countDocuments(query);
+
+        res.status(200).json({ 
+            success: true, 
+            data: legislativeAssemblies, 
+            pagination: { 
+                total,
+                page: pageInt,
+                limit: limitInt,
+                hasNextPage: (skip + legislativeAssemblies.length) < total
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -55,6 +70,32 @@ export const bulkUploadLegislativeAssemblies = async (req, res) => {
             message: "Legislative Assemblies uploaded successfully",
             count: assemblies.length,
         });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const updateLegislativeAssembly = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedAssembly = await LegislativeAssembly.findByIdAndUpdate(id, req.body, { new: true });
+        if (!updatedAssembly) {
+            return res.status(404).json({ success: false, message: "Legislative Assembly not found" });
+        }
+        res.status(200).json({ success: true, data: updatedAssembly });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+export const deleteLegislativeAssembly = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedAssembly = await LegislativeAssembly.findByIdAndDelete(id);
+        if (!deletedAssembly) {
+            return res.status(404).json({ success: false, message: "Legislative Assembly not found" });
+        }
+        res.status(200).json({ success: true, message: "Legislative Assembly deleted successfully" });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
