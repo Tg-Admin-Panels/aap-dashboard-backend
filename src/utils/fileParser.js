@@ -32,14 +32,18 @@ export const parseFile = async (filePath) => {
     }
 
     if (ext === "xlsx") {
-        const workbook = XLSX.readFile(filePath);
+        // ✅ read Multer uploaded file as buffer
+        const fileBuffer = fs.readFileSync(filePath);
+        const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+
         const sheetName = workbook.SheetNames[0];
         let rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-        // Remove rows where every field is null/empty
         rows = rows.filter((row) => {
             if (!row || typeof row !== "object") return false;
-            const values = Object.values(row).map((v) => (v ? String(v).trim() : ""));
+            const values = Object.values(row).map((v) =>
+                v ? String(v).trim() : ""
+            );
             return values.some((v) => v.length > 0);
         });
 
