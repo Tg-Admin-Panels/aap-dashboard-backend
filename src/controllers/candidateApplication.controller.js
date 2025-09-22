@@ -6,44 +6,28 @@ import ApiError from "../utils/ApiError.js";
 export const createCandidateApplication = asyncHandler(async (req, res) => {
     const {
         applicantName,
-        state,
+        fatherName,
+        dob,
+        gender,
         district,
         legislativeAssembly,
-        mobile,
         address,
-        harGharJhandaCount,
-        janAakroshMeetingsCount,
-        communityMeetingsCount,
-        facebookFollowers,
-        facebookPageLink,
-        instagramFollowers,
-        instagramLink,
-        biodataPdfUrl,
-        biodataPdfPublicId,
+        mobile,
+        biodataPdf,
+        ...otherFields
     } = req.body;
 
     if (!applicantName) throw new ApiError(400, "Applicant name is required");
+    if (!fatherName) throw new ApiError(400, "Father name is required");
+    if (!dob) throw new ApiError(400, "Date of birth is required");
+    if (!gender) throw new ApiError(400, "Gender is required");
     if (!district) throw new ApiError(400, "District is required");
-    if (!legislativeAssembly)
-        throw new ApiError(400, "Legislative Assembly is required");
+    if (!legislativeAssembly) throw new ApiError(400, "Legislative Assembly is required");
     if (!mobile || !/^\d{10}$/.test(mobile)) {
         throw new ApiError(400, "Valid mobile number is required");
     }
     if (!address) throw new ApiError(400, "Address is required");
-    if (harGharJhandaCount === undefined)
-        throw new ApiError(400, "Count for 'Har Ghar Jhanda' is required");
-    if (janAakroshMeetingsCount === undefined)
-        throw new ApiError(400, "Count for 'Jan Aakrosh meetings' is required");
-    if (communityMeetingsCount === undefined)
-        throw new ApiError(400, "Count for 'Community meetings' is required");
-    if (facebookFollowers === undefined)
-        throw new ApiError(400, "Facebook followers count is required");
-    if (!facebookPageLink)
-        throw new ApiError(400, "Facebook page link is required");
-    if (instagramFollowers === undefined)
-        throw new ApiError(400, "Instagram followers count is required");
-    if (!instagramLink) throw new ApiError(400, "Instagram link is required");
-    if (!biodataPdfUrl) throw new ApiError(400, "Biodata PDF is required");
+    if (!biodataPdf) throw new ApiError(400, "Biodata PDF is required");
 
     const existingApplication = await CandidateApplication.findOne({ mobile });
     if (existingApplication) {
@@ -55,20 +39,15 @@ export const createCandidateApplication = asyncHandler(async (req, res) => {
 
     const application = await CandidateApplication.create({
         applicantName,
-        state,
+        fatherName,
+        dob,
+        gender,
         district,
         legislativeAssembly,
-        mobile,
         address,
-        harGharJhandaCount,
-        janAakroshMeetingsCount,
-        communityMeetingsCount,
-        facebookFollowers,
-        facebookPageLink,
-        instagramFollowers,
-        instagramLink,
-        biodataPdfUrl,
-        biodataPdfPublicId,
+        mobile,
+        biodataPdf,
+        ...otherFields,
     });
 
     if (!application)
@@ -130,7 +109,9 @@ export const updateCandidateApplication = asyncHandler(async (req, res) => {
             new: true,
             runValidators: true,
         }
-    );
+    ).populate("state", "name")
+    .populate("district", "name")
+    .populate("legislativeAssembly", "name");
     if (!updatedApplication)
         return res
             .status(404)
