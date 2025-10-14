@@ -11,6 +11,7 @@ import {
     deleteWingMember,
     deleteWing,
     getWingById,
+    getLeader,
 } from "../controllers/wing.controller.js";
 import {
     ensureAdmin,
@@ -31,18 +32,14 @@ router.use(ensureAdmin);
 
 router.post("/", createWing);
 router.post("/:wingId/leader", addLeader);
+router.get("/:wingId/leader", getLeader);
 router.post("/:wingId/member", addMember);
 router.put(
     "/:wingId/leader-change",
-    (req, res, next) => {
-        console.log("change leader");
-        console.log(req.body);
-        next();
-    },
     changeLeader
 );
 router.put("/members/update/:memberId", updateMember);
-router.delete("members/:memberId", deleteWingMember);
+router.delete("/members/:memberId", deleteWingMember);
 router.delete("/:wingId", deleteWing);
 
 export default router;

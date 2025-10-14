@@ -102,6 +102,21 @@ export const addLeader = asyncHandler(async (req, res) => {
         );
 });
 
+export const getLeader = asyncHandler(async (req, res) => {
+    const { wingId } = req.params;
+    console.log("Get leader called", wingId);
+    const wings = await Wing.find({})
+    console.log("Get leader called", wings);
+    const wing = await Wing.findById(wingId).populate("leader");
+    if (!wing) throw new ApiError(404, "Wing not found");
+    // if (!wing.leader || String(wing.leader._id) !== id) {
+    //     throw new ApiError(404, "Leader not found for this wing");
+    // }
+    return res
+        .status(200)
+        .json(new ApiResponse(200, wing.leader, "Leader fetched successfully"));
+});
+
 // change wing leader
 export const changeLeader = asyncHandler(async (req, res) => {
     const { wingId } = req.params;
@@ -310,30 +325,54 @@ export const getAllWingMembers = asyncHandler(async (req, res) => {
 export const deleteWingMember = asyncHandler(async (req, res) => {
     const { memberId } = req.params;
 
+    // 1 Find the member
     const member = await WingMember.findById(memberId);
     if (!member) throw new ApiError(404, "Wing member not found");
 
+    // 2 Find the wing the member belongs to
     const wing = await Wing.findById(member.wing);
+    if (wing) {
+        wing.members = wing.members.filter(
+            (id) => id.toString() !== memberId.toString()
+        );
+        await wing.save();
+    }
 
-    if (wing)
-        wing.members = wing.members.filter((id) => id.toString() !== memberId);
+    // 3 Delete the member document itself
+    await WingMember.findByIdAndDelete(memberId);
 
-    await wing.remove();
-
-    return res
-        .status(200)
-        .json(new ApiResponse(200, member, "Wing member deleted successfully"));
+    // 4 Return structured response
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            { wing: wing?._id, memberId },
+            "Wing member deleted successfully"
+        )
+    );
 });
 
 export const deleteWing = asyncHandler(async (req, res) => {
     const { wingId } = req.params;
 
+    // 1. Check if wing exists
     const wing = await Wing.findById(wingId);
     if (!wing) throw new ApiError(404, "Wing not found");
 
-    await wing.remove();
+    // 2. Delete all members associated with this wing
+    const deletedMembers = await WingMember.deleteMany({ wing: wingId });
 
-    return res
-        .status(200)
-        .json(new ApiResponse(200, wing, "Wing deleted successfully"));
+    // 3. Delete the wing itself
+    await wing.deleteOne();
+
+    // 4. Send response
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                wing,
+                deletedMembersCount: deletedMembers.deletedCount,
+            },
+            "Wing and all associated members deleted successfully"
+        )
+    );
 });
