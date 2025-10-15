@@ -6,56 +6,101 @@ import mongoose from "mongoose";
 
 // GET /api/dashboard/stats
 export const getDashboardStats = asyncHandler(async (req, res) => {
+    const { period = "monthly" } = req.query; // "monthly" | "weekly" | "yearly"
     const now = new Date();
-    const monthsBack = (n) =>
-        new Date(now.getFullYear(), now.getMonth() - n, 1);
 
-    // 1. Member & Volunteer Growth (Last 6 Months)
-    const lastSixMonths = Array.from({ length: 12 }, (_, i) => {
-        const date = monthsBack(11 - i);
-        return {
-            label: date.toLocaleString("default", { month: "short" }),
-            date,
-        };
-    });
+    // Helper to go back in time
+    const monthsBack = (n) => new Date(now.getFullYear(), now.getMonth() - n, 1);
+    const weeksBack = (n) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() - n * 7);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    };
+    const yearsBack = (n) => new Date(now.getFullYear() - n, 0, 1);
 
+    // -----------------------------
+    // 1 Generate Period Labels
+    // -----------------------------
+    let timeline = [];
+
+    if (period === "weekly") {
+        timeline = Array.from({ length: 12 }, (_, i) => {
+            const date = weeksBack(11 - i);
+            return {
+                label: `Week ${i + 1}`,
+                start: date,
+                end: new Date(date.getTime() + 7 * 24 * 60 * 60 * 1000),
+            };
+        });
+    } else if (period === "yearly") {
+        timeline = Array.from({ length: 5 }, (_, i) => {
+            const start = yearsBack(4 - i);
+            const end = new Date(start.getFullYear() + 1, 0, 1);
+            return {
+                label: start.getFullYear().toString(),
+                start,
+                end,
+            };
+        });
+    } else {
+        // default: monthly (last 12 months)
+        timeline = Array.from({ length: 12 }, (_, i) => {
+            const start = monthsBack(11 - i);
+            const end = new Date(start);
+            end.setMonth(start.getMonth() + 1);
+            return {
+                label: start.toLocaleString("default", { month: "short" }),
+                start,
+                end,
+            };
+        });
+    }
+
+    // -----------------------------
+    // 2 Growth Data
+    // -----------------------------
     const memberGrowth = await Promise.all(
-        lastSixMonths.map(({ date }, i) => {
-            const nextMonth = new Date(date);
-            nextMonth.setMonth(date.getMonth() + 1);
-            return Member.countDocuments({
-                createdAt: { $gte: date, $lt: nextMonth },
-            });
-        })
+        timeline.map(({ start, end }) =>
+            Member.countDocuments({
+                createdAt: { $gte: start, $lt: end },
+            })
+        )
     );
 
     const volunteerGrowth = await Promise.all(
-        lastSixMonths.map(({ date }, i) => {
-            const nextMonth = new Date(date);
-            nextMonth.setMonth(date.getMonth() + 1);
-            return Volunteer.countDocuments({
-                createdAt: { $gte: date, $lt: nextMonth },
-            });
-        })
+        timeline.map(({ start, end }) =>
+            Volunteer.countDocuments({
+                createdAt: { $gte: start, $lt: end },
+            })
+        )
     );
 
-    // 2. Distribution by State
+    // -----------------------------
+    // 3 State Distribution (Members)
+    // -----------------------------
     const stateStats = await Member.aggregate([
         { $group: { _id: "$state", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
     ]);
 
-    // 3. Gender Distribution (from volunteers)
+    // -----------------------------
+    // 4 Gender Distribution (Volunteers)
+    // -----------------------------
     const genderStats = await Volunteer.aggregate([
         { $group: { _id: "$gender", count: { $sum: 1 } } },
     ]);
 
-    // 4. Joined By Source (self or volunteer)
+    // -----------------------------
+    // 5 Join Type Distribution (Members)
+    // -----------------------------
     const joinTypeStats = await Member.aggregate([
         { $group: { _id: "$joinedBy", count: { $sum: 1 } } },
     ]);
 
-    // 5. Top Volunteers (by member count)
+    // -----------------------------
+    // 6 Top Volunteers (Members Added)
+    // -----------------------------
     const topVolunteers = await Member.aggregate([
         { $match: { joinedBy: "volunteer" } },
         {
@@ -74,9 +119,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
                 as: "volunteer",
             },
         },
-        {
-            $unwind: "$volunteer",
-        },
+        { $unwind: "$volunteer" },
         {
             $project: {
                 fullName: "$volunteer.fullName",
@@ -86,10 +129,14 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         },
     ]);
 
+    // -----------------------------
+    // 7 Final Response
+    // -----------------------------
     res.status(200).json(
         new ApiResponse(200, {
+            filter: period,
             growth: {
-                months: lastSixMonths.map((m) => m.label),
+                timeline: timeline.map((t) => t.label),
                 members: memberGrowth,
                 volunteers: volunteerGrowth,
             },
@@ -100,3 +147,4 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         })
     );
 });
+
