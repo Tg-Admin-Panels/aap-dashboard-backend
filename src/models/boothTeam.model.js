@@ -16,6 +16,22 @@ const boothTeamSchema = new mongoose.Schema({
         trim: true,
         lowercase: true,
     },
+
+    state: {
+        type: String,
+        required: [true, "State name is required"],
+        trim: true,
+    },
+    district: {
+        type: String,
+        required: [true, "District name is required"],
+        trim: true,
+    },
+    legislativeAssembly: {
+        type: String,
+        required: [true, "Assembly name is required"],
+        trim: true,
+    },
     boothName: {
         type: String,
         required: [true, "Booth name is required"],

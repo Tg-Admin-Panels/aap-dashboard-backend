@@ -3,7 +3,7 @@ import BoothTeam from "../models/boothTeam.model.js";
 // Create a new booth team member
 export const createBoothTeamMember = async (req, res) => {
     try {
-        const { name, phone, email, boothName, post, padnaam } = req.body;
+        const { name, phone, email, state, district, legislativeAssembly, boothName, post, padnaam } = req.body;
         const newMember = new BoothTeam({
             name,
             phone,
@@ -11,6 +11,7 @@ export const createBoothTeamMember = async (req, res) => {
             boothName,
             post,
             padnaam,
+            state, district, legislativeAssembly,
         });
         await newMember.save();
         res.status(201).json({
@@ -29,9 +30,18 @@ export const createBoothTeamMember = async (req, res) => {
 // Get all booth team members with pagination
 export const getAllBoothTeamMembers = async (req, res) => {
     try {
-        const { boothName, post, padnaam, page = 1, limit = 10 } = req.query;
+        const { state, district, legislativeAssembly, boothName, post, padnaam, page = 1, limit = 10 } = req.query;
         const query = {};
 
+        if (state) {
+            query.state = state;
+        }
+        if (district) {
+            query.district = district;
+        }
+        if (legislativeAssembly) {
+            query.legislativeAssembly = legislativeAssembly;
+        }
         if (boothName) {
             query.boothName = boothName;
         }
