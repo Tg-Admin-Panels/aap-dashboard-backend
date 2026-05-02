@@ -8,8 +8,8 @@ const port = (process.env.NODE_ENV === 'production' ? process.env.PROD_PORT : pr
 
 connectDB()
     .then(() => {
-        app.listen(port, () => {
-            console.log(`Server started on port ${port}`);
+        app.listen(port, "0.0.0.0", () => {
+            console.log(`Server started on port ${port} at 0.0.0.0`);
         });
     })
     .catch((err) => console.log(err));
