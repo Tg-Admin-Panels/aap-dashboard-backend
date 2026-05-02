@@ -14,36 +14,8 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- ✅ CUSTOM CORS MIDDLEWARE ---
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    console.log("This is origin");
-    console.log(origin);
-
-    if (origin) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-    }
-
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader(
-        "Access-Control-Allow-Methods",
-        "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-    );
-    res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization"
-    );
-
-    if (req.method === "OPTIONS") {
-        return res.sendStatus(204);
-    }
-    next();
-});
-
-// ✅ Middleware
-app.use(express.json({ limit: "50mb" }));
-const allowedOrigins = process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(",") 
+const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(",")
     : [
         "http://test-admin.aapbihar.org",
         "http://localhost:5173",
@@ -52,7 +24,10 @@ const allowedOrigins = process.env.CORS_ORIGIN
         "http://127.0.0.1:5500",
         "https://aapbihar.org",
         "https://admin.aapbihar.org",
+        "https://aap-bihar-dashboard.netlify.app",
+        "https://aap-bihar.netlify.app"
     ];
+console.log(allowedOrigins)
 
 app.use(
     cors({
@@ -60,6 +35,9 @@ app.use(
         credentials: true,
     })
 );
+
+// ✅ Middleware
+app.use(express.json({ limit: "50mb" }));
 
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
