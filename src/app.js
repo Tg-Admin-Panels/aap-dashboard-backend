@@ -42,17 +42,21 @@ app.use((req, res, next) => {
 
 // ✅ Middleware
 app.use(express.json({ limit: "50mb" }));
+const allowedOrigins = process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(",") 
+    : [
+        "http://test-admin.aapbihar.org",
+        "http://localhost:5173",
+        "http://localhost:5500",
+        "http://127.0.0.1:5501",
+        "http://127.0.0.1:5500",
+        "https://aapbihar.org",
+        "https://admin.aapbihar.org",
+    ];
+
 app.use(
     cors({
-        origin: [
-            "http://test-admin.aapbihar.org",
-            "http://localhost:5173",
-            "http://localhost:5500",
-            "http://127.0.0.1:5501",
-            "http://127.0.0.1:5500",
-            "https://aapbihar.org",
-            "https://admin.aapbihar.org",
-        ], // TODO: change this
+        origin: allowedOrigins,
         credentials: true,
     })
 );
