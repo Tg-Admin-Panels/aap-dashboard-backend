@@ -6,7 +6,7 @@
     "type": "module",
     "scripts": {
         "dev": "nodemon -r dotenv/config --experimental-json-modules index.js",
-        "start": "node -r dotenv/config --experimental-json-modules index.js",
+        "start": "node --experimental-json-modules index.js",
         "format": "prettier --write .",
         "test-routes": "node testRoutes.js"
     },
